@@ -1,0 +1,373 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet"><title>MerchSys - Admin</title></head><body>
+<div id="nav"></div>
+<main class="container pb-5">
+  <div class="ux-crumb">Admin / <b id="crumb">Dashboard</b></div>
+  <h1 class="ux-title" id="title">Dashboard</h1>
+  <div class="ux-layout">
+    <aside><nav class="ux-side" id="tabs" aria-label="Admin">
+      <button class="ux-nav on" data-tab="dash"><i class="ico" data-i="grid"></i>Dashboard</button>
+      <button class="ux-nav" data-tab="orders"><i class="ico" data-i="bag"></i>Orders</button>
+      <button class="ux-nav" data-tab="products"><i class="ico" data-i="tag"></i>Products</button>
+      <button class="ux-nav" data-tab="campuses"><i class="ico" data-i="pin"></i>Pickup locations</button>
+      <button class="ux-nav" data-tab="users" id="tabUsers"><i class="ico" data-i="users"></i>Users</button>
+      <a class="ux-nav out" href="/index.html"><i class="ico" data-i="home"></i>View shop</a>
+    </nav></aside>
+
+    <div class="min-w-0">
+      <!-- DASHBOARD -->
+      <section id="sec-dash">
+        <div class="row g-3 mb-3" id="stats"></div>
+        <div class="row g-3">
+          <div class="col-12"><div class="ux-card mb-0"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="chart"></i></span><div><h2>Sales</h2><p>Revenue and orders in the last 30 days</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chRevenue"></canvas><div class="muted text-center pt-5 d-none" id="chRevenue-empty">No orders yet.</div></div></div></div></div>
+          <div class="col-md-6"><div class="ux-card mb-0 h-100"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="bag"></i></span><div><h2>Orders by status</h2><p>Where every order is right now</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chStatus"></canvas><div class="muted text-center pt-5 d-none" id="chStatus-empty">No orders yet.</div></div></div></div></div>
+          <div class="col-md-6"><div class="ux-card mb-0 h-100"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="lock"></i></span><div><h2>Payment methods</h2><p>How students choose to pay</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chPay"></canvas><div class="muted text-center pt-5 d-none" id="chPay-empty">No orders yet.</div></div></div></div></div>
+          <div class="col-md-6"><div class="ux-card mb-0 h-100"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="tag"></i></span><div><h2>Top products</h2><p>Units sold</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chTop"></canvas><div class="muted text-center pt-5 d-none" id="chTop-empty">No sales yet.</div></div></div></div></div>
+          <div class="col-md-6"><div class="ux-card mb-0 h-100"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="pin"></i></span><div><h2>Pickup locations</h2><p>Orders per college or campus</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chCampus"></canvas><div class="muted text-center pt-5 d-none" id="chCampus-empty">No orders yet.</div></div></div></div></div>
+        </div>
+      </section>
+
+      <!-- ORDERS -->
+      <section id="sec-orders" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="bag"></i></span><div class="grow"><h2>Orders</h2><p id="ordCount">Click an order to see its details</p></div>
+            <button class="btn btn-outline-ms btn-sm px-3" id="fRefresh">Refresh</button></div>
+          <div class="ux-body pb-3"><div class="ux-grid3">
+            <div class="ux-in"><select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="shipped">Shipped</option><option value="ready_for_pickup">Ready for pickup</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><i class="ico chev" data-i="chev"></i></div>
+            <div class="ux-in"><select id="fPay" aria-label="Filter by payment"><option value="">All payments</option><option value="unpaid">Unpaid</option><option value="pending_verification">Verifying</option><option value="paid">Paid</option><option value="failed">Failed</option></select><i class="ico chev" data-i="chev"></i></div>
+            <div class="ux-in"><i class="ico" data-i="search"></i><input id="fQ" placeholder="Search order, name or ID" aria-label="Search orders"></div>
+          </div></div>
+          <div class="ux-tablewrap"><table class="ux-table stack"><thead><tr><th>Order</th><th>Student</th><th>Pickup</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead><tbody id="orderRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- PRODUCTS -->
+      <section id="sec-products" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="tag"></i></span><div class="grow"><h2>Products</h2><p>What students can pre-order in the shop</p></div>
+            <button class="btn btn-ms btn-sm px-3" id="addProduct">Add product</button></div>
+          <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th></th><th>Name</th><th>Price</th><th>Stock</th><th>Pre-order closes</th><th></th></tr></thead><tbody id="prodRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- CAMPUSES -->
+      <section id="sec-campuses" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="pin"></i></span><div class="grow"><h2>Pickup locations</h2><p>Colleges and campuses students can choose at checkout. The note is shown on their order page and in emails.</p></div>
+            <button class="btn btn-ms btn-sm px-3" id="addCampus">Add location</button></div>
+          <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th>Name</th><th>Address</th><th>Pickup note</th><th></th></tr></thead><tbody id="campRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section id="sec-users" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="users"></i></span><div class="grow"><h2>Users</h2><p>Make someone staff or admin. Staff can manage orders and products.</p></div></div>
+          <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th>Name</th><th>Student ID</th><th>Course, year and block</th><th>Campus</th><th>Mobile</th><th>Role</th></tr></thead><tbody id="userRows"></tbody></table></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- ORDER MODAL -->
+<div class="modal fade" id="orderModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="omTitle"></h5><button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body" id="omBody"></div>
+</div></div></div>
+
+<!-- CAMPUS MODAL -->
+<div class="modal fade" id="campModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" id="campForm">
+  <div class="modal-header"><h5 class="modal-title" id="cmTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label" for="cName">Name of college or campus</label><input id="cName" class="form-control" required></div>
+    <div class="mb-2"><label class="form-label" for="cAddr">Address</label><input id="cAddr" class="form-control"></div>
+    <div class="mb-2"><label class="form-label" for="cNote">Pickup note / reminder</label><textarea id="cNote" class="form-control" rows="3" placeholder="e.g. Bring your school ID. Pick up at the Registrar's office."></textarea></div>
+    <div class="row g-2 align-items-end"><div class="col-6"><label class="form-label" for="cSort">Order in the list</label><input id="cSort" type="number" class="form-control" value="0"></div>
+      <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="cMain"><label class="form-check-label" for="cMain">This is the Main Campus</label></div>
+      <div class="form-check" id="cActiveWrap"><input class="form-check-input" type="checkbox" id="cActive" checked><label class="form-check-label" for="cActive">Available at checkout</label></div></div></div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-ms" id="cSave">Save campus</button></div>
+</form></div></div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal fade" id="prodModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" id="prodForm">
+  <div class="modal-header"><h5 class="modal-title" id="pmTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label" for="pName">Name</label><input id="pName" class="form-control" required></div>
+    <div class="mb-2"><label class="form-label" for="pCat">Category</label><select id="pCat" class="form-select"><option>Clothes</option><option>Bags</option><option>Caps</option><option>Pins</option><option>Others</option></select></div>
+    <div class="mb-2"><label class="form-label" for="pDesc">Description</label><textarea id="pDesc" class="form-control" rows="2"></textarea></div>
+    <div class="row g-2 mb-2">
+      <div class="col-4"><label class="form-label" for="pPrice">Price (PHP)</label><input id="pPrice" type="number" min="0" step="0.01" class="form-control" required></div>
+      <div class="col-4"><label class="form-label" for="pStock">Stock</label><input id="pStock" type="number" min="0" step="1" class="form-control" required></div>
+      <div class="col-4"><label class="form-label" for="pLow">Low-stock alert at</label><input id="pLow" type="number" min="0" step="1" class="form-control" value="5"></div>
+    </div>
+    <div class="mb-2"><label class="form-label" for="pDeadline">Pre-order closes (optional)</label><input id="pDeadline" type="datetime-local" class="form-control"></div>
+    <div class="mb-2"><label class="form-label" for="pImage">Image (max 5MB)</label><input id="pImage" type="file" accept="image/*" class="form-control"></div>
+    <div class="form-check" id="pActiveWrap"><input class="form-check-input" type="checkbox" id="pActive" checked><label class="form-check-label" for="pActive">Visible in the shop</label></div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-ms" id="pSave">Save product</button></div>
+</form></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+renderNav('admin'); hydrateIcons();
+const STATUS_COLORS = { pending: '#f7b267', approved: '#a9cfe9', shipped: '#4a90c9', ready_for_pickup: '#2f9e75', completed: '#8fa3b3', cancelled: '#d4504b' };
+const loaded = {};
+const charts = {};
+const $ = (id) => document.getElementById(id);
+
+if (requireLogin(true)) init();
+
+function init() {
+  if (Auth.user().role !== 'admin') $('tabUsers').remove();
+  $('tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
+  show('dash');
+}
+
+function show(name) {
+  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', users: 'Users' };
+  document.querySelectorAll('#tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name];
+  ['dash', 'orders', 'products', 'campuses', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
+  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, users: loadUsers })[name]();
+}
+
+/* ---------------- Dashboard ---------------- */
+function drawChart(id, config, hasData) {
+  charts[id]?.destroy();
+  $(id).classList.toggle('d-none', !hasData);
+  $(id + '-empty').classList.toggle('d-none', hasData);
+  if (hasData) charts[id] = new Chart($(id), config);
+}
+
+async function loadDash() {
+  try {
+    const s = await api('/analytics');
+    const t = s.totals;
+    const card = (label, val, cls = '') => '<div class="col-6 col-md-4"><div class="stat ' + cls + '"><div class="muted small">' + label + '</div><div class="display-num">' + val + '</div></div></div>';
+    $('stats').innerHTML = card('Revenue (paid)', peso(t.revenue), 'good') + card('Total orders', t.orders) +
+      card('Awaiting payment', t.pending_payments, t.pending_payments ? 'warn' : '') + card('Shipped', t.in_transit) + card('Ready for pickup', t.ready_for_pickup) +
+      card('Low stock', s.low_stock, s.low_stock ? 'warn' : '');
+
+    const days = s.revenue_by_day;
+    drawChart('chRevenue', {
+      data: {
+        labels: days.map((d) => new Date(d.day + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })),
+        datasets: [
+          { type: 'bar', label: 'Revenue (PHP)', data: days.map((d) => Number(d.revenue)), backgroundColor: '#2b7bb9', borderRadius: 4, yAxisID: 'y' },
+          { type: 'line', label: 'Orders', data: days.map((d) => d.orders), borderColor: '#f28c28', backgroundColor: '#f28c28', tension: .3, yAxisID: 'y1' },
+        ],
+      },
+      options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true }, y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { precision: 0 } } } },
+    }, days.length > 0);
+
+    drawChart('chStatus', {
+      type: 'doughnut',
+      data: { labels: s.orders_by_status.map((x) => (STATUS[x.status] || [x.status])[0]), datasets: [{ data: s.orders_by_status.map((x) => x.count), backgroundColor: s.orders_by_status.map((x) => STATUS_COLORS[x.status] || '#999') }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+    }, s.orders_by_status.length > 0);
+
+    drawChart('chTop', {
+      type: 'bar',
+      data: { labels: s.top_products.map((x) => x.name), datasets: [{ label: 'Units sold', data: s.top_products.map((x) => Number(x.units)), backgroundColor: '#2b7bb9', borderRadius: 4 }] },
+      options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
+    }, s.top_products.length > 0);
+
+    drawChart('chPay', {
+      type: 'doughnut',
+      data: { labels: s.payment_split.map((x) => PAY_METHOD[x.method] || x.method), datasets: [{ data: s.payment_split.map((x) => x.count), backgroundColor: ['#2b7bb9', '#f28c28', '#a9cfe9'] }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+    }, s.payment_split.length > 0);
+
+    drawChart('chCampus', {
+      type: 'bar',
+      data: { labels: s.orders_by_campus.map((x) => x.campus), datasets: [{ label: 'Orders', data: s.orders_by_campus.map((x) => x.count), backgroundColor: '#f28c28', borderRadius: 4 }] },
+      options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
+    }, s.orders_by_campus.length > 0);
+  } catch (e) { fail(e); }
+}
+
+/* ---------------- Orders ---------------- */
+let ordersCache = [], campusList = [];
+async function loadOrders() {
+  try {
+    const q = new URLSearchParams();
+    if ($('fStatus').value) q.set('status', $('fStatus').value);
+    if ($('fPay').value) q.set('payment_status', $('fPay').value);
+    if ($('fQ').value.trim()) q.set('q', $('fQ').value.trim());
+    ordersCache = await api('/orders?' + q.toString());
+    $('ordCount').textContent = ordersCache.length + ' order' + (ordersCache.length === 1 ? '' : 's') + ' · click one to see its details';
+    $('orderRows').innerHTML = ordersCache.length ? ordersCache.map((o) =>
+      '<tr class="clickable" data-id="' + o.id + '"><td class="nw"><div class="fw-bold">#' + o.order_no + '</div><div class="muted small">' + fmtDate(o.created_at) + '</div></td>' +
+      '<td><div class="fw-medium">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.student_id || o.profiles?.university_email || '') + '</div></td>' +
+      '<td>' + esc(o.campus?.name || '-') + '</td><td class="nw fw-bold">' + peso(o.total) + '</td>' +
+      '<td class="nw">' + badge(STATUS, o.status) + '</td>' +
+      '<td class="nw">' + badge(PAY_STATUS, o.payment_status) + '<div class="muted small mt-1">' + esc(PAY_METHOD[o.payment_method]) + '</div></td></tr>').join('')
+      : '<tr><td colspan="6" class="text-center muted py-4">No orders match these filters.</td></tr>';
+  } catch (e) { fail(e); }
+}
+$('fRefresh').addEventListener('click', loadOrders);
+$('fStatus').addEventListener('change', loadOrders);
+$('fPay').addEventListener('change', loadOrders);
+let qTimer; $('fQ').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(loadOrders, 350); });
+$('orderRows').addEventListener('click', (e) => { const r = e.target.closest('tr[data-id]'); if (r) openOrder(r.dataset.id); });
+
+const orderModal = new bootstrap.Modal($('orderModal'));
+async function openOrder(id) {
+  try {
+    if (!campusList.length) campusList = await api('/campuses/all');
+    const o = await api('/orders/' + id);
+    $('omTitle').textContent = 'Order #' + o.order_no;
+    const canMarkPaid = o.payment_status !== 'paid' && o.status !== 'cancelled';
+    $('omBody').innerHTML =
+      '<div class="row g-3"><div class="col-md-6"><div class="muted small">Student</div><div class="fw-bold">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.university_email) + '</div><div class="muted small">' + esc([o.profiles?.student_id && 'ID ' + o.profiles.student_id, o.profiles?.course, o.profiles?.year_level, o.profiles?.block && 'Block ' + o.profiles.block, o.profiles?.phone].filter(Boolean).join(' | ')) + '</div></div>' +
+      '<div class="col-md-6"><div class="muted small">Placed</div><div>' + fmtDateTime(o.created_at) + '</div></div></div><hr>' +
+      '<table class="table table-sm"><tbody>' + o.order_items.map((i) => '<tr><td>' + esc(i.product_name) + '</td><td class="text-end">x' + i.quantity + '</td><td class="text-end">' + peso(i.unit_price * i.quantity) + '</td></tr>').join('') +
+      '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + peso(o.total) + '</th></tr></tfoot></table>' +
+      '<div class="panel mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><div><div class="muted small">Payment</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div></div><div>' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
+      (o.reference_number ? '<div class="mt-2 small">Reference number: <b>' + esc(o.reference_number) + '</b></div>' : '') +
+      (o.receipt_url ? '<div class="mt-2"><a href="' + esc(o.receipt_url) + '" target="_blank" rel="noopener"><img src="' + esc(o.receipt_url) + '" alt="GCash receipt" style="max-height:220px;border-radius:8px;border:1px solid var(--line)"></a></div>' : '') +
+      (canMarkPaid ? '<div class="mt-3 d-flex gap-2"><button class="btn btn-sm btn-ms" id="omPaid">' + (o.payment_method === 'onsite' ? 'Confirm cash received' : 'Mark as paid') + '</button>' +
+        (o.payment_status === 'pending_verification' ? '<button class="btn btn-sm btn-outline-danger" id="omFail">Reject receipt</button>' : '') + '</div>' : '') + '</div>' +
+      '<div class="row g-2 mb-2"><div class="col-md-6"><label class="form-label" for="omCampus">Pickup location</label><select id="omCampus" class="form-select">' +
+      campusList.map((c) => '<option value="' + c.id + '"' + (c.id === o.pickup_campus_id ? ' selected' : '') + '>' + esc(c.name) + (c.is_main ? ' (Main)' : '') + '</option>').join('') + '</select><div class="form-text">Change to the Main Campus if the student must pick up there.</div></div>' +
+      '<div class="col-md-6"><label class="form-label" for="omNote">Pickup note for this order (optional)</label><textarea id="omNote" class="form-control" rows="2" placeholder="Overrides the campus note in the email">' + esc(o.pickup_note || '') + '</textarea></div></div>' +
+      '<div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="omStatus">Order status</label><select id="omStatus" class="form-select">' +
+      Object.entries(STATUS).map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select></div>' +
+      '<div class="col-md-4"><label class="form-label" for="omPickup">Pickup date</label><input id="omPickup" type="date" class="form-control" value="' + (o.pickup_date || '') + '"></div>' +
+      '<div class="col-md-3"><button class="btn btn-gold w-100" id="omSave">Save status</button></div></div>';
+
+    $('omPaid')?.addEventListener('click', () => payAction(id, 'paid'));
+    $('omFail')?.addEventListener('click', () => payAction(id, 'failed'));
+    $('omSave').addEventListener('click', async () => {
+      const status = $('omStatus').value;
+      if (status === 'cancelled' && !confirm('Cancel this order? Stock will be returned.')) return;
+      try {
+        await api('/orders/' + id + '/status', { method: 'PATCH', body: { status, pickup_date: $('omPickup').value || undefined, pickup_campus_id: $('omCampus').value || undefined, pickup_note: $('omNote').value } });
+        toast('Status updated and student notified', 'success'); orderModal.hide(); loadOrders();
+      } catch (err) { fail(err); }
+    });
+    orderModal.show();
+  } catch (e) { fail(e); }
+}
+async function payAction(id, payment_status) {
+  try { await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } }); toast('Payment updated', 'success'); orderModal.hide(); loadOrders(); } catch (e) { fail(e); }
+}
+
+/* ---------------- Products ---------------- */
+let products = [];
+async function loadProducts() {
+  try {
+    products = await api('/products/all');
+    $('prodRows').innerHTML = products.length ? products.map((p) =>
+      '<tr class="' + (p.is_active ? '' : 'muted') + '"><td>' + (p.image_url ? '<img class="thumb" src="' + esc(p.image_url) + '" alt="">' : '<div class="thumb d-flex align-items-center justify-content-center fw-bold">' + esc(p.name.charAt(0)) + '</div>') + '</td>' +
+      '<td class="fw-bold">' + esc(p.name) + '<div class="muted small fw-normal">' + esc(p.category) + '</div>' + (p.is_active ? '' : ' <span class="badge bg-secondary">Hidden</span>') + '</td><td>' + peso(p.price) + '</td>' +
+      '<td>' + p.stock + (p.stock <= p.low_stock_threshold ? ' <span class="badge bg-warning text-dark">Low</span>' : '') + '</td><td>' + fmtDate(p.preorder_deadline) + '</td>' +
+      '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + p.id + '">Edit</button> ' +
+      (p.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + p.id + '">Hide</button>' : '') + '</td></tr>').join('')
+      : '<tr><td colspan="6" class="text-center muted py-4">No products yet. Click "Add product" to create one.</td></tr>';
+  } catch (e) { fail(e); }
+}
+const prodModal = new bootstrap.Modal($('prodModal'));
+let editingId = null;
+function openProduct(p) {
+  editingId = p?.id || null;
+  $('pmTitle').textContent = p ? 'Edit product' : 'Add product';
+  $('pName').value = p?.name || ''; $('pCat').value = p?.category || 'Clothes'; $('pDesc').value = p?.description || '';
+  $('pPrice').value = p?.price ?? ''; $('pStock').value = p?.stock ?? ''; $('pLow').value = p?.low_stock_threshold ?? 5;
+  $('pDeadline').value = p?.preorder_deadline ? new Date(new Date(p.preorder_deadline) - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+  $('pImage').value = ''; $('pActive').checked = p ? p.is_active : true;
+  $('pActiveWrap').classList.toggle('d-none', !p);
+  prodModal.show();
+}
+$('addProduct').addEventListener('click', () => openProduct(null));
+$('prodRows').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const p = products.find((x) => x.id === b.dataset.id);
+  if (b.dataset.a === 'edit') openProduct(p);
+  if (b.dataset.a === 'hide' && confirm('Hide "' + p.name + '" from the shop? Past orders are kept.')) {
+    try { await api('/products/' + p.id, { method: 'DELETE' }); toast('Product hidden', 'success'); loadProducts(); } catch (err) { fail(err); }
+  }
+});
+$('prodForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('pSave').disabled = true;
+  const f = new FormData();
+  f.append('name', $('pName').value); f.append('category', $('pCat').value); f.append('description', $('pDesc').value); f.append('price', $('pPrice').value);
+  f.append('stock', $('pStock').value); f.append('low_stock_threshold', $('pLow').value || 5);
+  f.append('preorder_deadline', $('pDeadline').value ? new Date($('pDeadline').value).toISOString() : '');
+  if (editingId) f.append('is_active', $('pActive').checked);
+  if ($('pImage').files[0]) f.append('image', $('pImage').files[0]);
+  try {
+    await api(editingId ? '/products/' + editingId : '/products', { method: editingId ? 'PUT' : 'POST', form: f });
+    toast('Product saved', 'success'); prodModal.hide(); loadProducts();
+  } catch (err) { fail(err); } finally { $('pSave').disabled = false; }
+});
+
+/* ---------------- Campuses ---------------- */
+const campModal = new bootstrap.Modal($('campModal'));
+let editingCampus = null;
+async function loadCampuses() {
+  try {
+    campusList = await api('/campuses/all');
+    $('campRows').innerHTML = campusList.length ? campusList.map((c) =>
+      '<tr class="' + (c.is_active ? '' : 'muted') + '"><td class="fw-bold">' + esc(c.name) + (c.is_main ? ' <span class="badge bg-primary">Main</span>' : '') + (c.is_active ? '' : ' <span class="badge bg-secondary">Hidden</span>') + '</td>' +
+      '<td>' + esc(c.address || '-') + '</td><td class="small" style="max-width:340px">' + esc(c.pickup_note || '-') + '</td>' +
+      '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + c.id + '">Edit</button> ' +
+      (c.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + c.id + '">Hide</button>' : '') + '</td></tr>').join('')
+      : '<tr><td colspan="4" class="text-center muted py-4">No campuses yet. Click "Add campus".</td></tr>';
+  } catch (e) { fail(e); }
+}
+function openCampus(c) {
+  editingCampus = c?.id || null;
+  $('cmTitle').textContent = c ? 'Edit campus' : 'Add campus';
+  $('cName').value = c?.name || ''; $('cAddr').value = c?.address || ''; $('cNote').value = c?.pickup_note || '';
+  $('cSort').value = c?.sort_order ?? 0; $('cMain').checked = !!c?.is_main; $('cActive').checked = c ? c.is_active : true;
+  $('cActiveWrap').classList.toggle('d-none', !c);
+  campModal.show();
+}
+$('addCampus').addEventListener('click', () => openCampus(null));
+$('campRows').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const c = campusList.find((x) => x.id === b.dataset.id);
+  if (b.dataset.a === 'edit') openCampus(c);
+  if (b.dataset.a === 'hide' && confirm('Hide "' + c.name + '" from checkout? Past orders keep it.')) {
+    try { await api('/campuses/' + c.id, { method: 'DELETE' }); toast('Campus hidden', 'success'); loadCampuses(); } catch (err) { fail(err); }
+  }
+});
+$('campForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('cSave').disabled = true;
+  const body = { name: $('cName').value, address: $('cAddr').value, pickup_note: $('cNote').value, sort_order: $('cSort').value, is_main: $('cMain').checked };
+  if (editingCampus) body.is_active = $('cActive').checked;
+  try {
+    await api(editingCampus ? '/campuses/' + editingCampus : '/campuses', { method: editingCampus ? 'PUT' : 'POST', body });
+    toast('Campus saved', 'success'); campModal.hide(); loadCampuses();
+  } catch (err) { fail(err); } finally { $('cSave').disabled = false; }
+});
+
+/* ---------------- Users (admin only) ---------------- */
+async function loadUsers() {
+  try {
+    const users = await api('/users');
+    const me = Auth.user().id;
+    $('userRows').innerHTML = users.map((u) =>
+      '<tr><td class="fw-bold">' + esc(u.full_name) + '<div class="muted small fw-normal">' + esc(u.university_email) + '</div></td><td>' + esc(u.student_id || '-') + '</td><td>' + esc([u.course, u.year_level, u.block && 'Block ' + u.block].filter(Boolean).join(' / ') || '-') + '</td><td>' + esc(u.campus?.name || '-') + '</td><td>' + esc(u.phone || '-') + '</td>' +
+      '<td><select class="form-select form-select-sm" style="width:130px" data-id="' + u.id + '"' + (u.id === me ? ' disabled' : '') + '>' +
+      ['student', 'staff', 'admin'].map((r) => '<option' + (r === u.role ? ' selected' : '') + '>' + r + '</option>').join('') + '</select></td></tr>').join('');
+  } catch (e) { fail(e); }
+}
+$('userRows').addEventListener('change', async (e) => {
+  const sel = e.target.closest('select[data-id]'); if (!sel) return;
+  try { await api('/users/' + sel.dataset.id + '/role', { method: 'PATCH', body: { role: sel.value } }); toast('Role updated', 'success'); } catch (err) { fail(err); loadUsers(); }
+});
+</script></body></html>

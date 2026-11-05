@@ -3,8 +3,12 @@
 ## 1. Supabase (database, auth, storage)
 1. Sign up at supabase.com, **New project**. Region: **Southeast Asia (Singapore)**. Save the database password.
 2. Open **SQL Editor > New query**, paste all of `db/schema.sql`, click **Run**.
-3. (Optional) Run `db/seed.sql` for sample products.
-4. **Project Settings > API**: copy `Project URL`, `anon` key, and `service_role` key.
+3. Run `db/migration-02-campuses.sql` the same way (adds campuses, product categories, and the Shipped status).
+4. Run `db/migration-03-student-info.sql` too (adds student ID, year level, block, campus, address, and phone to accounts).
+5. Run `db/migration-04-locations-middlename.sql` (adds the real BU colleges and campuses as pickup locations and middle names).
+6. Run `db/migration-05-payment-gateway.sql` (renames the checkout id column so any payment provider works).
+7. (Optional) Run `db/seed.sql` for sample products.
+7. **Project Settings > API**: copy `Project URL`, `anon` key, and `service_role` key.
    The service_role key is a secret. Never put it in frontend code or commit it.
 
 ## 2. Run locally
@@ -22,14 +26,19 @@ update public.profiles set role = 'admin' where university_email = 'your@email.c
 ```
 After that you can promote staff from the Users page.
 
-## 4. PayMongo (GCash, test mode)
-1. Sign up at paymongo.com, stay in **Test mode**.
-2. Developers > API Keys: copy the **secret key** (`sk_test_...`) into `PAYMONGO_SECRET_KEY`.
-3. After deploying, Developers > Webhooks > create one:
-   - URL: `https://YOUR-APP.vercel.app/api/payments/webhook`
-   - Event: `checkout_session.payment.paid`
-4. Local testing: webhooks cannot reach localhost, so the order page calls `/api/payments/verify/:orderId` after you return from the GCash test page. Same result.
-5. The GCash test page lets you simulate a successful or failed payment (no real money).
+## 4. Online payment: Maya Checkout sandbox (no sign-up needed)
+PayMongo sign-ups may be paused. Maya publishes **public sandbox keys** for testing, so you can use those.
+1. Open https://developers.maya.ph/reference/sandbox-credentials-and-cards
+2. In the **Checkout** keys, copy a **public key** (`pk-...`) and its **secret key** (`sk-...`) from the same row.
+3. Put them in `.env`:
+   ```
+   MAYA_PUBLIC_KEY=pk-...
+   MAYA_SECRET_KEY=sk-...
+   ```
+4. Restart the server. Run `db/migration-05-payment-gateway.sql` in Supabase first.
+5. To test: place an order with **Online payment**, pay with the **sandbox test card or test Maya wallet** listed on that same Maya page (no real money), then you are redirected back and the order turns **Paid** automatically.
+6. These keys are shared by every developer who uses them, so never treat the data as private. Do not put real card numbers.
+7. If PayMongo opens again, set `PAYMONGO_SECRET_KEY` and leave the Maya keys blank (or set `PAYMENT_PROVIDER=paymongo`). Nothing else changes.
 
 ## 5. Resend (emails)
 1. Sign up at resend.com, create an API key, put it in `RESEND_API_KEY`.
@@ -56,7 +65,7 @@ Check `git status` first: `.env` must NOT be listed (it is in `.gitignore`).
 The old MerchSys repo contained a `.env` with the MongoDB connection string. Change that database password or delete the old cluster.
 
 ## Not verified yet
-This code was written without internet access, so it has not been run against live Supabase, PayMongo, or Resend. Test each flow in test mode and check the PayMongo response fields against their docs while testing.
+This code was written without internet access, so it has not been run against live Supabase, Maya, or Resend. Test each flow in test mode and check the PayMongo response fields against their docs while testing.
 
 ## Submission file names (IT 118 format: SIA101_GroupName_ProjectTitle)
 Replace `GroupName` with your actual group name (no spaces).

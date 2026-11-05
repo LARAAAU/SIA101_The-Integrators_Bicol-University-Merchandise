@@ -6,9 +6,9 @@ const { requireAuth, staffOnly } = require('../middleware/auth');
 const { sendMail, templates } = require('../lib/mailer');
 const { getOrder, markPaid, syncPayment } = require('../lib/payments');
 
-const STATUSES = ['pending', 'approved', 'ready_for_pickup', 'completed', 'cancelled'];
+const STATUSES = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed', 'cancelled'];
 const PAYMENT_METHODS = ['gcash_online', 'gcash_manual', 'onsite'];
-const LIST_SELECT = '*, order_items(*), profiles(full_name, university_email, course)';
+const LIST_SELECT = '*, order_items(*), profiles(full_name, university_email, course, student_id, year_level, block, phone), campus:campuses(name)';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -29,7 +29,8 @@ async function withReceiptUrl(order) {
 
 // POST /api/orders  { items:[{product_id, quantity}], payment_method }
 router.post('/', requireAuth, async (req, res) => {
-  const { items, payment_method } = req.body;
+  const { items, payment_method, campus_id } = req.body;
+  if (!campus_id) return res.status(400).json({ message: 'Please choose a pickup campus' });
   if (!Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Your cart is empty' });
   if (!PAYMENT_METHODS.includes(payment_method)) return res.status(400).json({ message: 'Invalid payment method' });
 
@@ -43,7 +44,7 @@ router.post('/', requireAuth, async (req, res) => {
 
   // Stock check + deduction + order insert happen in ONE database transaction (see db/schema.sql)
   const { data: orderId, error } = await admin.rpc('create_order', {
-    p_student: req.user.id, p_items: clean, p_payment_method: payment_method,
+    p_student: req.user.id, p_items: clean, p_payment_method: payment_method, p_campus: campus_id,
   });
   if (error) return res.status(400).json({ message: error.message });
 
@@ -73,12 +74,13 @@ router.get('/', staffOnly, async (req, res) => {
       ? data.filter((o) =>
           String(o.order_no).includes(q) ||
           o.profiles?.full_name?.toLowerCase().includes(q) ||
+          o.profiles?.student_id?.toLowerCase().includes(q) ||
           o.profiles?.university_email?.toLowerCase().includes(q))
       : data
   );
 });
 
-// GET /api/orders/:id  (owner or staff). Also re-checks PayMongo if payment is still unpaid.
+// GET /api/orders/:id  (owner or staff). Also re-checks the payment provider if payment is still unpaid.
 router.get('/:id', requireAuth, async (req, res) => {
   let order = await getOrder(req.params.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -108,7 +110,7 @@ router.post('/:id/receipt', requireAuth, upload.single('receipt'), async (req, r
 
 // PATCH /api/orders/:id/status  { status, pickup_date? }  (staff/admin)
 router.patch('/:id/status', staffOnly, async (req, res) => {
-  const { status, pickup_date } = req.body;
+  const { status, pickup_date, pickup_campus_id, pickup_note } = req.body;
   if (!STATUSES.includes(status)) return res.status(400).json({ message: 'Invalid status' });
 
   if (status === 'cancelled') {
@@ -117,6 +119,8 @@ router.patch('/:id/status', staffOnly, async (req, res) => {
   } else {
     const patch = { status, updated_at: new Date().toISOString() };
     if (pickup_date) patch.pickup_date = pickup_date;
+    if (pickup_campus_id) patch.pickup_campus_id = pickup_campus_id; // e.g. redirect pickup to the Main Campus
+    if (pickup_note !== undefined) patch.pickup_note = pickup_note || null;
     const { error } = await admin.from('orders').update(patch).eq('id', req.params.id);
     if (error) return res.status(400).json({ message: error.message });
   }

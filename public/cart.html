@@ -1,0 +1,83 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet"><title>MerchSys - Cart</title></head><body>
+<div id="nav"></div>
+<main class="container pb-5">
+  <h2 class="mb-3">Your cart</h2>
+  <div class="row g-4">
+    <div class="col-lg-7"><div class="panel" id="items"></div></div>
+    <div class="col-lg-5">
+      <div class="panel" id="checkout">
+        <h5>Where will you pick up?</h5>
+        <select id="campus" class="form-select mt-2 mb-2" aria-label="Pickup campus"></select>
+        <div class="reminder small mb-4" id="campusNote"></div>
+        <h5>How will you pay?</h5>
+        <div class="d-grid gap-2 my-3">
+          <label class="pay-opt"><input type="radio" name="pm" value="gcash_online" checked class="form-check-input me-2"><b>Online payment</b><div class="muted small ms-4">Pay now with a card or Maya wallet on a secure payment page. Your order is confirmed automatically.</div></label>
+          <label class="pay-opt"><input type="radio" name="pm" value="gcash_manual" class="form-check-input me-2"><b>GCash (send receipt)</b><div class="muted small ms-4">Send to the merch GCash number, then upload your receipt for staff to verify.</div></label>
+          <label class="pay-opt"><input type="radio" name="pm" value="onsite" class="form-check-input me-2"><b>Pay onsite</b><div class="muted small ms-4">Pay in cash when you pick up your order.</div></label>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3"><span>Total</span><span class="display-num fs-3 fw-bold" id="total"></span></div>
+        <button class="btn btn-gold w-100 btn-lg" id="placeBtn">Place order</button>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+renderNav('cart'); renderFooter();
+let campuses = [];
+(async () => {
+  try {
+    campuses = await api('/campuses', { auth: false });
+    const saved = store.get('ms_campus') || Auth.user()?.campus_id;
+    campus.innerHTML = '<option value="">Choose your college or campus</option>' + campuses.map((c) => '<option value="' + c.id + '"' + (c.id === saved ? ' selected' : '') + '>' + esc(c.name) + (c.is_main ? ' (Main)' : '') + '</option>').join('');
+    showNote();
+  } catch (e) { fail(e); }
+})();
+function showNote() {
+  const c = campuses.find((x) => x.id === campus.value);
+  campusNote.innerHTML = c ? '<b>' + esc(c.name) + '</b>' + (c.address ? '<br>' + esc(c.address) : '') + '<br>' + esc(c.pickup_note || 'Bring your school ID.')
+    : 'Choose the college or campus where you want to pick up your order. Some orders may be picked up at the Main Campus; we will email you if that applies.';
+}
+campus.addEventListener('change', () => { store.set('ms_campus', campus.value); showNote(); });
+function draw() {
+  const c = Cart.get();
+  document.getElementById('checkout').style.display = c.length ? '' : 'none';
+  document.getElementById('items').innerHTML = c.length ? c.map((i) =>
+    '<div class="d-flex flex-wrap align-items-center gap-2 gap-sm-3 py-2 border-bottom"><div class="flex-grow-1" style="flex:1 1 150px;min-width:0"><div class="fw-bold">' + esc(i.name) + '</div><div class="muted small">' + peso(i.price) + ' each</div></div>' +
+    '<div class="btn-group btn-group-sm"><button class="btn btn-outline-ms" data-a="dec" data-id="' + i.id + '" aria-label="Less">-</button><span class="btn disabled text-dark">' + i.qty + '</span><button class="btn btn-outline-ms" data-a="inc" data-id="' + i.id + '" aria-label="More">+</button></div>' +
+    '<div class="fw-bold" style="min-width:90px;text-align:right">' + peso(i.price * i.qty) + '</div>' +
+    '<button class="btn btn-sm btn-link text-danger" data-a="rm" data-id="' + i.id + '">Remove</button></div>').join('')
+    : '<div class="text-center muted py-4">Your cart is empty. <a href="/index.html">Browse the shop</a></div>';
+  document.getElementById('total').textContent = peso(Cart.total());
+}
+document.getElementById('items').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const it = Cart.get().find((i) => i.id === b.dataset.id);
+  if (b.dataset.a === 'inc') { if (it.qty >= it.stock) toast('No more stock available', 'warning'); else Cart.setQty(it.id, it.qty + 1); }
+  if (b.dataset.a === 'dec') Cart.setQty(it.id, it.qty - 1);
+  if (b.dataset.a === 'rm') Cart.setQty(it.id, 0);
+  draw();
+});
+document.getElementById('placeBtn').addEventListener('click', async (e) => {
+  if (!requireLogin()) return;
+  if (!campus.value) { toast('Please choose a pickup campus', 'warning'); campus.focus(); return; }
+  const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Placing order...';
+  const method = document.querySelector('input[name=pm]:checked').value;
+  let order;
+  try {
+    order = await api('/orders', { method: 'POST', body: { payment_method: method, campus_id: campus.value, items: Cart.get().map((i) => ({ product_id: i.id, quantity: i.qty })) } });
+    Cart.clear();
+  } catch (err) { fail(err); btn.disabled = false; btn.textContent = 'Place order'; return; }
+  try {
+    if (method === 'gcash_online') { const r = await api('/payments/checkout', { method: 'POST', body: { order_id: order.id } }); location.href = r.checkout_url; return; }
+  } catch (err) { toast('Order placed, but the payment page could not open: ' + err.message, 'warning'); }
+  location.href = '/order-status.html?order=' + order.id;
+});
+draw();
+</script></body></html>

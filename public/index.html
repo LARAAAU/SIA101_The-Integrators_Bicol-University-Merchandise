@@ -1,8 +1,101 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MerchSys</title></head>
-<body style="font-family:Arial,sans-serif;text-align:center;margin-top:15vh">
-<h1>MerchSys</h1>
-<p>Backend is ready. Frontend pages are coming in the next batch.</p>
-<p><a href="/api/health">Check API health</a></p>
-</body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Shop</title></head><body>
+<div id="nav"></div>
+<main class="container pb-4">
+  <section class="hero">
+    <div>
+      <h1>Wear <em>BU</em>.<br>Pick it up on your campus.</h1>
+      <p>Shirts, hoodies, bags, caps and pins from Bicol University. Pre-order online, pay with GCash, and we deliver to the college or campus you choose.</p>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <a href="#shop" class="btn btn-gold btn-lg px-4">Shop merch</a>
+        <a href="#how" class="btn btn-outline-ms btn-lg px-4">How pickup works</a>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="disc"></div><div class="tile t1" id="h1"></div><div class="tile t2" id="h2"></div><div class="tile t3" id="h3"></div>
+      <div class="cd-pill" id="countdown" aria-live="polite" aria-hidden="false"><small>Checking pre-order dates...</small></div>
+    </div>
+  </section>
+
+  <section id="shop" class="pt-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">
+      <h2 class="h3 mb-0" style="font-family:'Unbounded',sans-serif;font-weight:700">Shop all merch</h2>
+      <input id="search" class="form-control" style="max-width:260px;border-radius:999px" placeholder="Search merch" aria-label="Search merch">
+    </div>
+    <div class="cats mb-3" id="cats" role="tablist"></div>
+    <div id="grid" class="row g-3"></div>
+  </section>
+
+  <section id="how" class="pt-5">
+    <h2 class="h3 mb-3" style="font-family:'Unbounded',sans-serif;font-weight:700">How pickup works</h2>
+    <div class="how">
+      <div class="s"><div class="n">1</div><div class="fw-bold">Order and pay</div><div class="muted small">Choose your merch, pick your college or campus, and pay with GCash or at pickup.</div></div>
+      <div class="s"><div class="n">2</div><div class="fw-bold">We ship to your campus</div><div class="muted small">You get an email when it is shipped and again when it arrives.</div></div>
+      <div class="s"><div class="n">3</div><div class="fw-bold">Pick up with your ID</div><div class="muted small">Show your school ID and order number at the pickup point.</div></div>
+    </div>
+    <div class="reminder mt-3 small"><b>Heads up:</b> some orders are picked up at the <b>Main Campus</b> instead. Your order page and email always show the exact pickup location.</div>
+  </section>
+</main>
+<div id="footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+renderNav('shop'); renderFooter();
+const CATS = [['All', '✨'], ['Clothes', '👕'], ['Bags', '🎒'], ['Caps', '🧢'], ['Pins', '📌'], ['Others', '🎁']];
+let products = [], cat = 'All', deadline = null;
+
+function drawCats() {
+  document.getElementById('cats').innerHTML = CATS.map(([n, i]) =>
+    '<button class="cat ' + (n === cat ? 'on' : '') + '" data-c="' + n + '" role="tab" aria-selected="' + (n === cat) + '"><div class="ico">' + i + '</div>' + n + '</button>').join('');
+}
+function card(p) {
+  const closed = p.preorder_deadline && new Date(p.preorder_deadline) < new Date();
+  const soldOut = p.stock <= 0, low = !soldOut && p.stock <= p.low_stock_threshold;
+  const isNew = Date.now() - new Date(p.created_at) < 14 * 864e5;
+  const off = closed || soldOut;
+  return '<div class="col-6 col-md-4 col-lg-3"><div class="product"><div class="pic">' +
+    (p.image_url ? '<img src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0))) +
+    (low ? '<span class="tag few">Few left</span>' : isNew && !off ? '<span class="tag new">New</span>' : '') + '</div>' +
+    '<div class="body"><div class="muted small">' + esc(p.category) + '</div><div class="fw-bold">' + esc(p.name) + '</div>' +
+    '<div class="muted small">' + (soldOut ? 'Sold out' : closed ? 'Pre-order closed' : (p.preorder_deadline ? 'Closes ' + fmtDate(p.preorder_deadline) : p.stock + ' available')) + '</div>' +
+    '<div class="row-end"><div class="price">' + peso(p.price) + '</div><button class="add" data-id="' + p.id + '" aria-label="Add ' + esc(p.name) + ' to cart"' + (off ? ' disabled' : '') + '>+</button></div></div></div></div>';
+}
+function drawGrid() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const list = products.filter((p) => (cat === 'All' || p.category === cat) && (!q || p.name.toLowerCase().includes(q)));
+  document.getElementById('grid').innerHTML = list.length ? list.map(card).join('')
+    : '<div class="col-12"><div class="panel text-center muted">' + (products.length ? 'Nothing matches your search.' : 'No merch yet. Staff can add products from the Admin page.') + '</div></div>';
+}
+function tick() {
+  const el = document.getElementById('countdown');
+  if (!deadline) return;
+  const ms = deadline.at - Date.now();
+  if (ms <= 0) { el.innerHTML = '<small>Pre-order closed for ' + esc(deadline.name) + '</small>'; return; }
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
+  el.innerHTML = '<small>Next pre-order closes in</small><div class="display-num">' + d + 'd ' + h + 'h ' + m + 'm</div><small>' + esc(deadline.name) + '</small>';
+}
+
+document.getElementById('cats').addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (b) { cat = b.dataset.c; drawCats(); drawGrid(); } });
+document.getElementById('search').addEventListener('input', drawGrid);
+document.getElementById('grid').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-id]'); if (!b) return;
+  const p = products.find((x) => x.id === b.dataset.id);
+  Cart.add(p) ? toast(p.name + ' added to cart', 'success') : toast('You already have all the available stock in your cart', 'warning');
+});
+
+(async () => {
+  drawCats();
+  try {
+    products = await api('/products', { auth: false });
+    drawGrid();
+    products.slice(0, 3).forEach((p, i) => { document.getElementById('h' + (i + 1)).innerHTML = p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : esc(p.name.charAt(0)); });
+    const open = products.filter((p) => p.preorder_deadline && new Date(p.preorder_deadline) > new Date() && p.stock > 0)
+      .sort((a, b) => new Date(a.preorder_deadline) - new Date(b.preorder_deadline))[0];
+    if (open) { deadline = { at: new Date(open.preorder_deadline).getTime(), name: open.name }; tick(); setInterval(tick, 30000); }
+    else document.getElementById('countdown').innerHTML = '<small>No pre-order deadline running</small>';
+  } catch (e) { fail(e); }
+})();
+</script></body></html>

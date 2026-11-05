@@ -8,7 +8,7 @@ Browser (HTML/Bootstrap/Chart.js)
       |  HTTPS + JWT
 Vercel (static files + Express serverless API)
       |------> Supabase: PostgreSQL, Auth, Storage
-      |------> PayMongo: GCash checkout  (webhook back to /api/payments/webhook)
+      |------> Maya Checkout (sandbox) or PayMongo: online payment, confirmed by asking the provider
       '------> Resend: email notifications
 ```
 
@@ -17,7 +17,7 @@ Vercel (static files + Express serverless API)
 api/index.js        Express app (Vercel entry point)
 server.js           Local dev server
 routes/             auth, products, orders, payments, users, analytics
-lib/                supabase client, mailer (Resend), payment helpers (PayMongo)
+lib/                supabase client, mailer (Resend), payment gateway adapter (Maya / PayMongo)
 middleware/auth.js  JWT check + role guards
 db/schema.sql       Tables, indexes, RLS, storage buckets, transactional functions
 public/             Frontend pages
@@ -35,9 +35,9 @@ docs/               Requirements document, setup guide
 | GET /api/orders/mine, /:id | user | Track orders |
 | POST /api/orders/:id/receipt, /cancel | user | Manual GCash receipt, cancel |
 | GET /api/orders, PATCH /:id/status, /:id/payment | staff | Fulfilment |
-| POST /api/payments/checkout | user | Start GCash payment (PayMongo) |
-| GET /api/payments/verify/:orderId | user/staff | Re-check payment with PayMongo |
-| POST /api/payments/webhook | PayMongo | Payment confirmation |
+| POST /api/payments/checkout | user | Start online payment (Maya or PayMongo) |
+| GET /api/payments/verify/:orderId | user/staff | Re-check payment with the provider |
+| POST /api/payments/webhook | PayMongo | Payment confirmation (optional) |
 | GET /api/analytics | staff | Dashboard and chart data |
 | GET/PATCH /api/users | admin | User roles |
 

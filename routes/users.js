@@ -4,7 +4,7 @@ const { adminOnly } = require('../middleware/auth');
 
 // GET /api/users
 router.get('/', adminOnly, async (req, res) => {
-  const { data, error } = await admin.from('profiles').select('*').order('created_at', { ascending: false });
+  const { data, error } = await admin.from('profiles').select('*, campus:campuses(name)').order('created_at', { ascending: false });
   if (error) return res.status(500).json({ message: error.message });
   res.json(data);
 });

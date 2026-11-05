@@ -1,0 +1,162 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Log in</title></head><body class="auth-body">
+<a class="auth-back" href="/index.html">&larr; Back to shop</a>
+<main class="auth-card">
+  <section class="auth-form">
+    <div class="auth-brand brand">BU <span>Merch</span></div>
+
+    <!-- LOG IN -->
+    <form id="viewLogin" novalidate>
+      <h1>Log in</h1>
+      <label for="lEmail">Email</label>
+      <input id="lEmail" type="email" class="pill" autocomplete="username" required>
+      <label for="lPass">Password</label>
+      <div class="pw"><input id="lPass" type="password" class="pill" autocomplete="current-password" required>
+        <button type="button" class="eye" data-eye="lPass" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <button class="pill-btn" id="lBtn">Log in</button>
+      <p class="swap">New here? <a href="#signup" data-mode="signup">Create an account</a></p>
+    </form>
+
+    <!-- SIGN UP (3 short steps) -->
+    <form id="viewSignup" class="d-none" novalidate>
+      <h1>Create account</h1>
+      <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+
+      <div class="wstep" data-step="0">
+        <div class="step-title">About you</div>
+        <div class="grid2">
+          <div><label for="sFirst">First name</label><input id="sFirst" class="pill" autocomplete="given-name" required></div>
+          <div><label for="sMiddle">Middle name</label><input id="sMiddle" class="pill" placeholder="Optional" autocomplete="additional-name"></div>
+          <div><label for="sLast">Last name</label><input id="sLast" class="pill" autocomplete="family-name" required></div>
+          <div><label for="sPhone">Mobile number</label><input id="sPhone" type="tel" class="pill" placeholder="09123456789" pattern="(\+?63|0)9[0-9]{9}" title="Example: 09123456789 (no spaces)" autocomplete="tel" required></div>
+        </div>
+        <label for="sAddress">Home address</label>
+        <input id="sAddress" class="pill" placeholder="Street, barangay, city, province" autocomplete="street-address" required>
+      </div>
+
+      <div class="wstep d-none" data-step="1">
+        <div class="step-title">Your school details</div>
+        <div class="grid2">
+          <div><label for="sStudentId">Student ID</label><input id="sStudentId" class="pill" required></div>
+          <div><label for="sCourse">Course</label><input id="sCourse" class="pill" placeholder="BSIT" required></div>
+          <div><label for="sYear">Year level</label>
+            <select id="sYear" class="pill" required><option value="">Select</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select></div>
+          <div><label for="sBlock">Block</label><input id="sBlock" class="pill" maxlength="5" placeholder="B" required></div>
+        </div>
+        <label for="sCampus">College / Campus</label>
+        <select id="sCampus" class="pill" required><option value="">Loading campuses...</option></select>
+      </div>
+
+      <div class="wstep d-none" data-step="2">
+        <div class="step-title">Set up your login</div>
+        <label for="sEmail">Email</label>
+        <input id="sEmail" type="email" class="pill" autocomplete="email" required>
+        <label for="sPass">Password (8+ characters)</label>
+        <div class="pw"><input id="sPass" type="password" class="pill" minlength="8" autocomplete="new-password" required>
+          <button type="button" class="eye" data-eye="sPass" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        <label for="sPass2">Confirm password</label>
+        <input id="sPass2" type="password" class="pill" autocomplete="new-password" required>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="ghost-btn d-none" id="backBtn">Back</button>
+        <button type="button" class="pill-btn" id="nextBtn">Next</button>
+      </div>
+      <p class="swap">Already have an account? <a href="#login" data-mode="login">Log in</a></p>
+    </form>
+  </section>
+
+  <aside class="auth-art" aria-hidden="true">
+    <svg viewBox="0 0 500 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs><filter id="sh" x="-20%" y="-5%" width="140%" height="110%"><feDropShadow dx="-6" dy="0" stdDeviation="7" flood-color="#12324a" flood-opacity=".22"/></filter></defs>
+      <path filter="url(#sh)" fill="#dcecf8" d="M120,0 C60,90 160,150 110,240 C60,330 170,380 120,470 C90,530 140,570 100,600 L500,600 L500,0 Z"/>
+      <path filter="url(#sh)" fill="#a9cfe9" d="M170,0 C120,100 210,150 165,250 C120,350 215,400 170,480 C140,540 185,575 150,600 L500,600 L500,0 Z"/>
+      <path filter="url(#sh)" fill="#4a90c9" d="M230,0 C180,100 270,160 225,260 C185,350 270,410 230,490 C205,545 245,580 215,600 L500,600 L500,0 Z"/>
+      <path filter="url(#sh)" fill="#2b7bb9" d="M290,0 C245,110 325,170 285,270 C250,360 325,420 290,500 C270,550 300,585 280,600 L500,600 L500,0 Z"/>
+      <path filter="url(#sh)" fill="#12324a" d="M350,0 C310,120 385,180 350,280 C320,370 385,430 355,510 C340,555 360,588 350,600 L500,600 L500,0 Z"/>
+      <circle cx="420" cy="120" r="46" fill="#f28c28"/><circle cx="455" cy="165" r="16" fill="#f7b267"/>
+    </svg>
+    <div class="caption"><div class="brand">BU Merch</div><p>Official Bicol University merch, ready at your campus.</p></div>
+  </aside>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const next = new URLSearchParams(location.search).get('next');
+let step = 0, campusesLoaded = false;
+
+/* ----- switch between log in and sign up ----- */
+function setMode(mode) {
+  const signup = mode === 'signup';
+  $('viewLogin').classList.toggle('d-none', signup);
+  $('viewSignup').classList.toggle('d-none', !signup);
+  document.title = signup ? 'BU Merch - Create account' : 'BU Merch - Log in';
+  if (signup && !campusesLoaded) loadCampuses();
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-mode]'); if (!a) return;
+  e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.mode); setMode(a.dataset.mode);
+});
+setMode(location.hash === '#signup' ? 'signup' : 'login');
+
+/* ----- show / hide password ----- */
+document.querySelectorAll('[data-eye]').forEach((b) => b.addEventListener('click', () => {
+  const i = $(b.dataset.eye); const show = i.type === 'password'; i.type = show ? 'text' : 'password';
+  b.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+}));
+
+/* ----- log in ----- */
+async function doLogin(email, password) {
+  const data = await api('/auth/login', { method: 'POST', body: { email, password }, auth: false });
+  Auth.save(data);
+  location.href = data.user.role !== 'student' ? '/admin.html' : (next && next.startsWith('/') ? next : '/index.html');
+}
+$('viewLogin').addEventListener('submit', async (e) => {
+  e.preventDefault(); const b = $('lBtn'); b.disabled = true;
+  try { await doLogin($('lEmail').value.trim(), $('lPass').value); } catch (err) { fail(err); b.disabled = false; }
+});
+
+/* ----- sign up wizard ----- */
+async function loadCampuses() {
+  try {
+    const list = await api('/campuses', { auth: false });
+    $('sCampus').innerHTML = '<option value="">Select your college or campus</option>' + list.map((c) => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+    campusesLoaded = true;
+  } catch (e) { fail(e); }
+}
+function showStep(n) {
+  step = n;
+  document.querySelectorAll('.wstep').forEach((el) => el.classList.toggle('d-none', Number(el.dataset.step) !== n));
+  document.querySelectorAll('.dots i').forEach((d, i) => d.classList.toggle('on', i <= n));
+  $('backBtn').classList.toggle('d-none', n === 0);
+  $('nextBtn').textContent = n === 2 ? 'Create account' : 'Next';
+}
+function validStep(n) {
+  for (const el of document.querySelectorAll('.wstep[data-step="' + n + '"] [required]')) {
+    if (!el.checkValidity()) { el.reportValidity(); return false; }
+  }
+  if (n === 2 && $('sPass').value !== $('sPass2').value) { toast('Passwords do not match', 'warning'); $('sPass2').focus(); return false; }
+  return true;
+}
+async function advance() {
+  if (!validStep(step)) return;
+  if (step < 2) return showStep(step + 1);
+  const b = $('nextBtn'); b.disabled = true;
+  const email = $('sEmail').value.trim();
+  try {
+    await api('/auth/register', { method: 'POST', auth: false, body: {
+      first_name: $('sFirst').value, middle_name: $('sMiddle').value, last_name: $('sLast').value, phone: $('sPhone').value, address: $('sAddress').value,
+      student_id: $('sStudentId').value, course: $('sCourse').value, year_level: $('sYear').value, block: $('sBlock').value, campus_id: $('sCampus').value,
+      email, password: $('sPass').value } });
+    await doLogin(email, $('sPass').value);
+  } catch (err) { fail(err); b.disabled = false; }
+}
+$('nextBtn').addEventListener('click', advance);
+$('backBtn').addEventListener('click', () => showStep(step - 1));
+$('viewSignup').addEventListener('submit', (e) => { e.preventDefault(); advance(); });
+</script></body></html>

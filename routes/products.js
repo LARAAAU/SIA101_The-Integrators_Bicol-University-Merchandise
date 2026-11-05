@@ -23,6 +23,7 @@ function parseBody(b) {
   const out = {};
   if (b.name !== undefined) out.name = String(b.name).trim();
   if (b.description !== undefined) out.description = b.description;
+  if (b.category !== undefined) out.category = b.category;
   if (b.price !== undefined) out.price = Number(b.price);
   if (b.stock !== undefined) out.stock = parseInt(b.stock, 10);
   if (b.low_stock_threshold !== undefined) out.low_stock_threshold = parseInt(b.low_stock_threshold, 10);
@@ -31,8 +32,9 @@ function parseBody(b) {
   return out;
 }
 
+const CATEGORIES = ['Clothes', 'Bags', 'Caps', 'Pins', 'Others'];
 const invalid = (p) =>
-  (p.name !== undefined && !p.name) || (p.price !== undefined && !(p.price >= 0)) || (p.stock !== undefined && !(p.stock >= 0));
+  (p.category !== undefined && !CATEGORIES.includes(p.category)) || (p.name !== undefined && !p.name) || (p.price !== undefined && !(p.price >= 0)) || (p.stock !== undefined && !(p.stock >= 0));
 
 // GET /api/products  (public; CDN-cached for speed)
 router.get('/', async (req, res) => {
