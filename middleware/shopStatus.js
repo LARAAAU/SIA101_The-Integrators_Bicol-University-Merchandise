@@ -11,11 +11,11 @@ const ALWAYS_OPEN = [
 
 async function roleFromToken(req) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!token) return null;
-  const { data } = await admin.auth.getUser(token);
-  if (!data?.user) return null;
+  if (!token) return { anonymous: true };
+  const { data, error } = await admin.auth.getUser(token);
+  if (error || !data?.user) return { expired: true };
   const { data: p } = await admin.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
-  return p?.role || null;
+  return { role: p?.role || null };
 }
 
 // Mounted on /api before the routes. While maintenance mode is on, only staff and admin get through.
@@ -23,8 +23,10 @@ async function maintenanceGate(req, res, next) {
   const shop = await getShop();
   if (!shop.maintenance_mode) return next();
   if (ALWAYS_OPEN.some(([m, re]) => m === req.method && re.test(req.path))) return next();
-  const role = await roleFromToken(req);
-  if (role === 'staff' || role === 'admin') return next();
+  const who = await roleFromToken(req);
+  // An expired login is not the same as a visitor: answer 401 so the browser refreshes the token and retries
+  if (who.expired) return res.status(401).json({ message: 'Session expired. Please log in again.' });
+  if (who.role === 'staff' || who.role === 'admin') return next();
   res.status(503).json({
     maintenance: true,
     message: shop.maintenance_message || 'The shop is under maintenance. Please check back soon.',

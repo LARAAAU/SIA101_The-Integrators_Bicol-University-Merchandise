@@ -65,12 +65,14 @@ function requireLogin(staff = false) {
 async function api(path, { method = 'GET', body, form, auth = true } = {}) {
   const opt = { method, headers: {} };
   const s = Auth.session();
-  if (s && auth) opt.headers.Authorization = 'Bearer ' + s.access_token;
+  // Public calls (products, campuses) also carry the token when someone is logged in, so staff are recognised during maintenance.
+  const useToken = s && (auth || !path.startsWith('/auth/'));
+  if (useToken) opt.headers.Authorization = 'Bearer ' + s.access_token;
   if (form) opt.body = form;
   else if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
 
   let res = await fetch(API + path, opt);
-  if (res.status === 401 && s?.refresh_token && auth) {
+  if (res.status === 401 && s?.refresh_token && useToken) {
     const r = await fetch(API + '/auth/refresh', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }),
     });
@@ -114,8 +116,33 @@ let SHOP = null;
 async function loadShop() {
   try { const r = await fetch(API + '/settings/shop', { cache: 'no-store' }); return r.ok ? await r.json() : null; } catch { return null; }
 }
+const MAINT_KEY = 'ms_maint'; // remembers (for this tab) that maintenance was on, so a reload shows the screen with no flash
+let maintTimer = null;
+function hideMaintenance() {
+  clearInterval(maintTimer); maintTimer = null;
+  document.getElementById('maintScreen')?.remove();
+  document.body.style.overflow = '';
+  try { sessionStorage.removeItem(MAINT_KEY); } catch {}
+}
+async function recheckMaintenance(manual) {
+  const btn = document.getElementById('maintRetry'), note = document.getElementById('maintNote');
+  if (manual && btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Checking...'; if (note) note.textContent = ''; }
+  const [s] = await Promise.all([loadShop(), manual ? new Promise((r) => setTimeout(r, 900)) : null]);
+  if (s && !s.maintenance_mode) {            // maintenance is over: reload (the spinner stays until the page is back)
+    try { sessionStorage.removeItem(MAINT_KEY); } catch {}
+    location.reload(); return;
+  }
+  if (s) { const p = document.getElementById('maintMsg'); if (p) p.textContent = s.maintenance_message || 'The shop is under maintenance. Please check back soon.'; }
+  if (manual && btn) {
+    btn.disabled = false; btn.textContent = 'Try again';
+    if (note) note.textContent = s ? 'Still under maintenance. Please try again in a few minutes.' : 'Could not check right now. Please check your internet connection.';
+  }
+}
 function showMaintenance(info) {
-  if (document.getElementById('maintScreen')) return;
+  const text = info.message || info.maintenance_message || 'The shop is under maintenance. Please check back soon.';
+  try { sessionStorage.setItem(MAINT_KEY, text); } catch {}
+  const existing = document.getElementById('maintScreen');
+  if (existing) { const p = document.getElementById('maintMsg'); if (p) p.textContent = text; return; }
   const u = Auth.user();
   const el = document.createElement('div');
   el.id = 'maintScreen'; el.className = 'maint-screen';
@@ -123,20 +150,26 @@ function showMaintenance(info) {
     <div class="maint-card">
       <div class="maint-ico">${ico('lock')}</div>
       <h1>We'll be right back</h1>
-      <p>${esc(info.message || info.maintenance_message || 'The shop is under maintenance. Please check back soon.')}</p>
+      <p id="maintMsg">${esc(text)}</p>
       <div class="d-flex gap-2 justify-content-center flex-wrap">
-        <button class="btn btn-ms" onclick="location.reload()">Try again</button>
+        <button class="btn btn-ms maint-btn" id="maintRetry">Try again</button>
         ${u ? '<button class="btn btn-outline-ms" id="maintLogout">Log out</button>' : '<a class="btn btn-outline-ms" href="/login.html">Staff log in</a>'}
       </div>
+      <div class="maint-note" id="maintNote" role="status" aria-live="polite"></div>
     </div>`;
   document.body.appendChild(el);
   document.body.style.overflow = 'hidden';
+  document.getElementById('maintRetry').addEventListener('click', () => recheckMaintenance(true));
   document.getElementById('maintLogout')?.addEventListener('click', Auth.logout);
+  maintTimer = setInterval(() => recheckMaintenance(false), 30000); // quietly check every 30 seconds
 }
 async function applyShopStatus() {
-  const s = SHOP = await loadShop(); if (!s) return;
   const staff = Auth.isStaff();
+  let cached = null; try { cached = sessionStorage.getItem(MAINT_KEY); } catch {}
+  if (cached !== null && !staff) showMaintenance({ message: cached }); // no flash of the page while we check
+  const s = SHOP = await loadShop(); if (!s) return;
   if (s.maintenance_mode && !staff) return showMaintenance(s);
+  if (document.getElementById('maintScreen')) hideMaintenance();
 
   const bars = [];
   if (s.maintenance_mode) bars.push('<div class="shop-bar maint"><b>Maintenance mode is on.</b> Students cannot use the shop right now. You can because you are staff.</div>');

@@ -430,3 +430,8 @@ textarea.form-control{min-height:0}
 .maint-card p{color:var(--muted);margin-bottom:1.5rem}
 .maint-ico{width:72px;height:72px;border-radius:50%;background:var(--sky);color:var(--link);display:inline-flex;align-items:center;justify-content:center}
 .maint-ico svg{width:34px;height:34px}
+.maint-screen{animation:maintIn .25s ease}
+@keyframes maintIn{from{opacity:0}to{opacity:1}}
+.maint-btn{min-width:130px}
+.maint-note{min-height:1.5rem;margin-top:1rem;font-size:.9rem;color:var(--muted)}
+.maint-btn:disabled{background:var(--blue);border-color:var(--blue);color:#fff;opacity:.8}
