@@ -34,6 +34,8 @@ docs/               Requirements document, setup guide
 | POST /api/orders | user | Place order (atomic stock deduction) |
 | GET /api/orders/mine, /:id | user | Track orders |
 | POST /api/orders/:id/receipt, /cancel | user | Manual GCash receipt, cancel |
+| GET /api/settings/payment | user | Merch GCash name and number for manual payments |
+| PUT /api/settings/payment | admin | Update the merch GCash account |
 | GET /api/orders, PATCH /:id/status, /:id/payment | staff | Fulfilment |
 | POST /api/payments/checkout | user | Start online payment (Maya or PayMongo) |
 | GET /api/payments/verify/:orderId | user/staff | Re-check payment with the provider |

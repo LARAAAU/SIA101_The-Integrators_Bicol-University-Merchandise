@@ -18,17 +18,19 @@ if (requireLogin()) {
   async function load(retry = 0) {
     try {
       order = await api('/orders/' + id);
-      render(retry);
+      await render(retry);
       if (qs.get('paid') === '1' && order.payment_status !== 'paid' && retry < 4) setTimeout(() => load(retry + 1), 2500);
     } catch (e) { document.getElementById('view').innerHTML = '<div class="panel text-danger">' + esc(e.message) + '</div>'; }
   }
 
-  function render(retry) {
+  let gcash;
+  async function render(retry) {
     const o = order, idx = STEPS.findIndex((s) => s[0] === o.status);
     const confirming = qs.get('paid') === '1' && o.payment_status !== 'paid' && retry < 4;
     const canPay = o.payment_method === 'gcash_online' && o.payment_status !== 'paid' && o.status !== 'cancelled';
     const canReceipt = o.payment_method === 'gcash_manual' && ['unpaid','failed'].includes(o.payment_status) && o.status !== 'cancelled';
     const canCancel = o.status === 'pending' && o.payment_status !== 'paid';
+    if (canReceipt && gcash === undefined) gcash = await loadGcash();
     document.getElementById('view').innerHTML =
       '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h2 class="mb-0">Order #' + o.order_no + '</h2><div>' + badge(STATUS, o.status) + ' ' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
       (confirming ? '<div class="alert alert-info">Confirming your payment. This takes a few seconds...</div>' : '') +
@@ -43,7 +45,7 @@ if (requireLogin()) {
       '<div class="panel mb-3"><div class="muted small">Payment method</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div><div class="muted small mt-2">Placed</div><div>' + fmtDateTime(o.created_at) + '</div>' +
       (o.reference_number ? '<div class="muted small mt-2">Reference number</div><div>' + esc(o.reference_number) + '</div>' : '') + '</div>' +
       (canPay ? '<div class="panel mb-3"><p class="mb-2">Your order is waiting for payment.</p><button class="btn btn-gold" id="payBtn">Pay now</button></div>' : '') +
-      (canReceipt ? '<form class="panel mb-3" id="rcpt"><h5>Upload your GCash receipt</h5><p class="muted small">Send the exact total to the merch GCash number first, then upload the screenshot and reference number.</p>' +
+      (canReceipt ? '<form class="panel mb-3" id="rcpt"><h5>Upload your GCash receipt</h5><p class="muted small mb-0">Send the exact total to the merch GCash account below first, then upload the screenshot and reference number.</p>' + gcashBox(gcash, o.total) +
         '<div class="mb-2"><label class="form-label" for="rFile">Receipt screenshot</label><input id="rFile" type="file" accept="image/*" class="form-control" required></div>' +
         '<div class="mb-3"><label class="form-label" for="rRef">GCash reference number</label><input id="rRef" class="form-control" required></div><button class="btn btn-ms">Send receipt</button></form>' : '') +
       (o.payment_status === 'pending_verification' ? '<div class="alert alert-warning">Receipt received. Staff will verify it soon and you will get an email.</div>' : '') +

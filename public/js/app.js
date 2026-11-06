@@ -23,6 +23,26 @@ const PAY_STATUS = {
 const PAY_METHOD = { gcash_online: 'Online payment', gcash_manual: 'GCash (send receipt)', onsite: 'Pay onsite' };
 const badge = (map, key) => { const [label, cls] = map[key] || [key, 'secondary']; return `<span class="badge bg-${cls}">${esc(label)}</span>`; };
 
+/* ---------- Manual GCash account (edited by admin in Payment settings) ---------- */
+const fmtGcashNumber = (n) => String(n || '').replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3');
+async function loadGcash() { try { return await api('/settings/payment'); } catch { return null; } }
+function gcashBox(s, total) {
+  if (!s || !s.gcash_number || !s.gcash_name) {
+    return '<div class="gcash-box"><div class="muted small">The merch GCash account has not been set yet. Please contact the shop staff before paying.</div></div>';
+  }
+  return '<div class="gcash-box"><div class="muted small">Send your payment to this GCash account</div>' +
+    '<div class="gcash-row"><span class="muted small">Account name</span><b>' + esc(s.gcash_name) + '</b></div>' +
+    '<div class="gcash-row"><span class="muted small">GCash number</span><b class="gcash-num">' + esc(fmtGcashNumber(s.gcash_number)) + '</b>' +
+    '<button type="button" class="btn btn-sm btn-outline-ms" data-copy="' + esc(s.gcash_number) + '">Copy</button></div>' +
+    (total != null ? '<div class="gcash-row"><span class="muted small">Amount to send</span><b>' + peso(total) + '</b></div>' : '') +
+    (s.gcash_note ? '<div class="small mt-2">' + esc(s.gcash_note) + '</div>' : '') + '</div>';
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('[data-copy]'); if (!b) return;
+  const done = () => { const t = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = t; }, 1500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.copy).then(done, () => {}); else done();
+});
+
 /* ---------- Auth ---------- */
 const Auth = {
   session: () => store.get('ms_session'),
@@ -192,6 +212,7 @@ const ICONS = {
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3.5-5.5 7-5.5s7 2 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2.5.6 4 2.2 4 5"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  wallet: '<path d="M3 7a2 2 0 0 1 2-2h12v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="16.5" cy="13.5" r="1.2"/>',
 };
 const ico = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 function hydrateIcons(root = document) { root.querySelectorAll('[data-i]').forEach((el) => { el.innerHTML = ico(el.dataset.i); }); }

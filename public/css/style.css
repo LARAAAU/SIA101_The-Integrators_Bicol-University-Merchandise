@@ -3,8 +3,8 @@
   --paper:#f7fbfe; --orange:#f28c28; --orange-d:#d97616; --orange-soft:#fff1e0;
   --line:#d8e6f2; --muted:#5d7488; --ok:#2f9e75; --bad:#d4504b;
   /* theme-aware surfaces (light values match the original design) */
-  --surface:#fff; --surface-2:var(--surface-2); --surface-3:var(--surface-3); --seg:var(--seg); --hover:var(--hover);
-  --line-2:var(--line-2); --line-3:var(--line-3); --line-in:var(--line-in); --pill-line:var(--pill-line);
+  --surface:#fff; --surface-2:#f7fbfe; --surface-3:#eef4f9; --seg:#e9f1f8; --hover:#f1f7fc;
+  --line-2:#e1ebf3; --line-3:#e9f0f6; --line-in:#c9d9e6; --pill-line:#bcd0e0;
   --link:#2b7bb9; --deep:#12324a; --on-accent:#12324a;
   --glow1:#cfe5f6; --glow2:#ffe3c4;
 }
@@ -401,3 +401,9 @@ textarea.form-control{min-height:0}
 [data-bs-theme="dark"] .theme-btn .i-sun{display:block}
 [data-bs-theme="dark"] .theme-btn .i-moon{display:none}
 .theme-btn.floating{position:fixed;top:1rem;right:1rem;z-index:1500;background:var(--surface)}
+
+/* ---------- manual GCash account box ---------- */
+.gcash-box{background:var(--sky);border:1px solid var(--line-2);border-radius:12px;padding:.85rem 1rem;margin:.75rem 0}
+.gcash-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.45rem}
+.gcash-row>span{min-width:110px}
+.gcash-num{font-family:'Unbounded',sans-serif;font-size:1.05rem;letter-spacing:.02em}

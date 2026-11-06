@@ -17,7 +17,8 @@
         <div class="d-grid gap-2 my-3">
           <label class="pay-opt"><input type="radio" name="pm" value="gcash_online" checked class="form-check-input me-2"><b>Online payment</b><div class="muted small ms-4">Pay now with a card or Maya wallet on a secure payment page. Your order is confirmed automatically.</div></label>
           <label class="pay-opt"><input type="radio" name="pm" value="gcash_manual" class="form-check-input me-2"><b>GCash (send receipt)</b><div class="muted small ms-4">Send to the merch GCash number, then upload your receipt for staff to verify.</div></label>
-          <label class="pay-opt"><input type="radio" name="pm" value="onsite" class="form-check-input me-2"><b>Pay onsite</b><div class="muted small ms-4">Pay in cash when you pick up your order.</div></label>
+          <div id="gcashInfo" class="d-none"></div>
+      <label class="pay-opt"><input type="radio" name="pm" value="onsite" class="form-check-input me-2"><b>Pay onsite</b><div class="muted small ms-4">Pay in cash when you pick up your order.</div></label>
         </div>
         <div class="d-flex justify-content-between align-items-center mb-3"><span>Total</span><span class="display-num fs-3 fw-bold" id="total"></span></div>
         <button class="btn btn-gold w-100 btn-lg" id="placeBtn">Place order</button>
@@ -80,4 +81,17 @@ document.getElementById('placeBtn').addEventListener('click', async (e) => {
   location.href = '/order-status.html?order=' + order.id;
 });
 draw();
+
+// show the merch GCash account when "GCash (send receipt)" is selected
+(function () {
+  let gc;
+  async function refresh() {
+    const on = document.querySelector('input[name=pm]:checked')?.value === 'gcash_manual';
+    const box = document.getElementById('gcashInfo'); if (!box) return;
+    box.classList.toggle('d-none', !on); if (!on) return;
+    if (gc === undefined) gc = await loadGcash();
+    box.innerHTML = gcashBox(gc);
+  }
+  document.querySelectorAll('input[name=pm]').forEach((r) => r.addEventListener('change', refresh));
+})();
 </script></body></html>
