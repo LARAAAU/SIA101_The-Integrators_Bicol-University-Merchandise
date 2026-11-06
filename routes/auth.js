@@ -13,6 +13,7 @@ const profileLimit = rateLimit({ windowMs: 15 * MIN, max: 30, key: (req) => `me|
 // Password reset: 5 emails per address per hour, 20 per IP per hour
 const forgotPerEmail = rateLimit({ windowMs: 60 * MIN, max: 5, key: (req) => `forgot|${String(req.body?.email || '').trim().toLowerCase()}`, message: 'Too many reset requests. Please try again later.' });
 const forgotPerIp = rateLimit({ windowMs: 60 * MIN, max: 20, key: (req) => `forgot-ip|${req.ip}`, message: 'Too many reset requests. Please try again later.' });
+const deactivateLimit = rateLimit({ windowMs: 15 * MIN, max: 5, key: (req) => `deact|${req.user?.id || req.ip}`, message: 'Too many attempts. Please try again later.' });
 const resetLimit = rateLimit({ windowMs: 15 * MIN, max: 10, key: (req) => `reset|${req.ip}`, message: 'Too many attempts. Please try again later.' });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -83,6 +84,7 @@ router.post('/login', loginPerIp, loginPerAccount, async (req, res) => {
   if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
 
   const { data, error } = await anon().auth.signInWithPassword({ email: clean(email).toLowerCase(), password });
+  if (error && /banned/i.test(error.message || '')) return res.status(403).json({ message: 'This account has been deactivated. Please contact the shop staff.' });
   if (error || !data.session) return res.status(401).json({ message: 'Invalid email or password' });
 
   res.json({
@@ -200,6 +202,27 @@ router.put('/me', requireAuth, profileLimit, async (req, res) => {
     if (error) return res.status(error.code === '23505' ? 409 : 400).json({ message: error.code === '23505' ? 'That student ID is already registered' : error.message });
   }
   res.json(await getProfile(req.user.id));
+});
+
+// POST /api/auth/deactivate  { password }
+// Blocks the account from logging in (Supabase "ban") and signs out every session. Orders and the profile are kept.
+// To reactivate: Supabase dashboard > Authentication > Users > the user > Unban.
+router.post('/deactivate', requireAuth, deactivateLimit, async (req, res) => {
+  const password = String(req.body?.password || '');
+  if (!password) return res.status(400).json({ message: 'Enter your password to confirm' });
+
+  const { error } = await anon().auth.signInWithPassword({ email: req.user.university_email, password });
+  if (error) return res.status(400).json({ message: 'Password is incorrect' });
+
+  // Do not allow it while an order is still in progress
+  const { data: open } = await admin.from('orders').select('id').eq('student_id', req.user.id).not('status', 'in', '(completed,cancelled)').limit(1);
+  if (open && open.length) return res.status(400).json({ message: 'You have an order in progress. Wait until it is completed, or cancel it first.' });
+
+  const { error: bErr } = await admin.auth.admin.updateUserById(req.user.id, { ban_duration: '876000h' }); // about 100 years
+  if (bErr) return res.status(400).json({ message: bErr.message });
+
+  try { await admin.auth.admin.signOut((req.headers.authorization || '').replace(/^Bearer\s+/i, ''), 'global'); } catch {}
+  res.json({ message: 'Account deactivated.' });
 });
 
 module.exports = router;

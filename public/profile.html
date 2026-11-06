@@ -59,6 +59,16 @@
           <div class="ux-body"><div class="ux-row"><i class="ico" data-i="device"></i><div class="flex-grow-1 min-w-0"><div class="fw-medium">This device</div><div class="muted small text-break" id="sessEmail"></div></div>
             <button class="btn btn-outline-ms btn-sm px-3" id="sessOut" type="button">Log out</button></div></div>
         </div>
+
+        <!-- DEACTIVATE -->
+        <form class="ux-card" id="fDeact" novalidate style="border-color:var(--bad)">
+          <div class="ux-head"><span class="ux-ico" style="color:var(--bad)"><i class="ico" data-i="lock"></i></span><div><h2>Deactivate account</h2><p>You will be logged out everywhere and will not be able to log in again. Your past orders are kept. To reactivate, contact the shop staff.</p></div></div>
+          <div class="ux-body">
+            <div class="ux-f"><label class="lbl" for="dPass">Enter your password to confirm</label><div class="ux-in"><i class="ico" data-i="lock"></i><input id="dPass" type="password" autocomplete="current-password"></div></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="dSure"><label class="form-check-label small" for="dSure">I understand that I will not be able to log in after this.</label></div>
+          </div>
+          <div class="ux-foot"><button class="btn btn-sm btn-outline-danger px-3" id="dBtn">Deactivate my account</button></div>
+        </form>
       </section>
     </div>
   </div>
@@ -113,6 +123,20 @@ fPass.addEventListener('submit', async (e) => {
   if (nw.value !== nw2.value) return toast('New passwords do not match', 'warning');
   const ok = await save({ current_password: cur.value, new_password: nw.value }, 'Password updated');
   if (ok) { cur.value = nw.value = nw2.value = ''; }
+});
+
+/* ----- deactivate account ----- */
+fDeact.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!dPass.value) { toast('Enter your password to confirm', 'warning'); dPass.focus(); return; }
+  if (!dSure.checked) { toast('Please tick the box to confirm', 'warning'); return; }
+  if (!confirm('Deactivate your account? You will be logged out and will not be able to log in again.')) return;
+  dBtn.disabled = true;
+  try {
+    await api('/auth/deactivate', { method: 'POST', body: { password: dPass.value } });
+    toast('Your account has been deactivated.', 'success');
+    setTimeout(() => Auth.logout(), 1500);
+  } catch (err) { fail(err); dBtn.disabled = false; }
 });
 
 if (requireLogin()) (async () => {
