@@ -127,6 +127,7 @@ function renderNav(active) {
   <nav class="navbar navbar-expand-md navbar-ms mb-4"><div class="container">
     <a class="navbar-brand brand" href="/index.html">BU <span>Merch</span></a>
     <div class="d-flex align-items-center gap-2 ms-auto order-md-last">
+      ${Theme.buttonHTML()}
       <a class="cart-btn ${active === 'cart' ? 'on' : ''}" href="/cart.html" aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span id="cartBadge" class="cart-count" hidden>0</span></a>
       <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-label="Menu"><span class="navbar-toggler-icon"></span></button>
     </div>

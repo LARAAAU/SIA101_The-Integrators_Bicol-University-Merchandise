@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const { admin } = require('../lib/supabase');
 const { staffOnly } = require('../middleware/auth');
+const { detectImage, badImage } = require('../lib/imageCheck');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -12,9 +13,10 @@ const upload = multer({
 });
 
 async function uploadImage(file) {
-  const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-  const { error } = await admin.storage.from('product-images').upload(name, file.buffer, { contentType: file.mimetype });
+  const kind = detectImage(file.buffer); // trust the file contents, not the name or the client's mimetype
+  if (!kind) throw badImage();
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${kind.ext}`;
+  const { error } = await admin.storage.from('product-images').upload(name, file.buffer, { contentType: kind.mime });
   if (error) throw new Error('Image upload failed: ' + error.message);
   return admin.storage.from('product-images').getPublicUrl(name).data.publicUrl;
 }
@@ -55,7 +57,7 @@ router.get('/all', staffOnly, async (req, res) => {
 router.post('/', staffOnly, upload.single('image'), async (req, res) => {
   const p = parseBody(req.body);
   if (!p.name || invalid(p) || p.price === undefined) return res.status(400).json({ message: 'Name and a valid price are required' });
-  if (req.file) p.image_url = await uploadImage(req.file);
+  if (req.file) { try { p.image_url = await uploadImage(req.file); } catch (e) { return res.status(e.status || 500).json({ message: e.message }); } }
   const { data, error } = await admin.from('products').insert(p).select().single();
   if (error) return res.status(400).json({ message: error.message });
   res.status(201).json(data);
@@ -65,7 +67,7 @@ router.post('/', staffOnly, upload.single('image'), async (req, res) => {
 router.put('/:id', staffOnly, upload.single('image'), async (req, res) => {
   const p = parseBody(req.body);
   if (invalid(p)) return res.status(400).json({ message: 'Invalid product data' });
-  if (req.file) p.image_url = await uploadImage(req.file);
+  if (req.file) { try { p.image_url = await uploadImage(req.file); } catch (e) { return res.status(e.status || 500).json({ message: e.message }); } }
   const { data, error } = await admin.from('products').update(p).eq('id', req.params.id).select().single();
   if (error) return res.status(400).json({ message: error.message });
   res.json(data);

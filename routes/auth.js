@@ -1,6 +1,14 @@
 const router = require('express').Router();
 const { admin, anon } = require('../lib/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/rateLimit');
+
+const MIN = 60 * 1000;
+// Login: 10 tries per email per 15 min, and 60 per IP per 15 min (campus Wi-Fi shares IPs, so the IP cap is loose)
+const loginPerAccount = rateLimit({ windowMs: 15 * MIN, max: 10, key: (req) => `${req.ip}|${String(req.body?.email || '').trim().toLowerCase()}` });
+const loginPerIp = rateLimit({ windowMs: 15 * MIN, max: 60, key: (req) => `ip|${req.ip}` });
+const registerLimit = rateLimit({ windowMs: 60 * MIN, max: 10, key: (req) => `reg|${req.ip}`, message: 'Too many sign-up attempts. Please try again later.' });
+const profileLimit = rateLimit({ windowMs: 15 * MIN, max: 30, key: (req) => `me|${req.user?.id || req.ip}` });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^(\+?63|0)9\d{9}$/;
@@ -22,7 +30,7 @@ async function validCampus(id) {
 }
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimit, async (req, res) => {
   const b = req.body;
   const first = clean(b.first_name), middle = clean(b.middle_name), last = clean(b.last_name);
   const email = clean(b.email).toLowerCase();
@@ -65,7 +73,7 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login  -> { access_token, refresh_token, expires_at, user }
-router.post('/login', async (req, res) => {
+router.post('/login', loginPerIp, loginPerAccount, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
 
@@ -97,7 +105,7 @@ router.post('/refresh', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => res.json(await getProfile(req.user.id)));
 
 // PUT /api/auth/me  (profile fields and/or password change)
-router.put('/me', requireAuth, async (req, res) => {
+router.put('/me', requireAuth, profileLimit, async (req, res) => {
   const b = req.body;
 
   if (b.new_password) {

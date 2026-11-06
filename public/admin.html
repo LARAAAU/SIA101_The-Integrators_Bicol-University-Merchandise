@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="/js/theme.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet"><title>MerchSys - Admin</title></head><body>
@@ -39,7 +39,7 @@
       <section id="sec-orders" class="d-none">
         <div class="ux-card">
           <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="bag"></i></span><div class="grow"><h2>Orders</h2><p id="ordCount">Click an order to see its details</p></div>
-            <button class="btn btn-outline-ms btn-sm px-3" id="fRefresh">Refresh</button></div>
+            <button class="btn btn-outline-ms btn-sm px-3 me-1" id="fExport">Export CSV</button><button class="btn btn-outline-ms btn-sm px-3" id="fRefresh">Refresh</button></div>
           <div class="ux-body pb-3"><div class="ux-grid3">
             <div class="ux-in"><select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="shipped">Shipped</option><option value="ready_for_pickup">Ready for pickup</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><i class="ico chev" data-i="chev"></i></div>
             <div class="ux-in"><select id="fPay" aria-label="Filter by payment"><option value="">All payments</option><option value="unpaid">Unpaid</option><option value="pending_verification">Verifying</option><option value="paid">Paid</option><option value="failed">Failed</option></select><i class="ico chev" data-i="chev"></i></div>
@@ -144,6 +144,19 @@ function show(name) {
 }
 
 /* ---------------- Dashboard ---------------- */
+function applyChartTheme() {
+  const dark = Theme.get() === 'dark';
+  Chart.defaults.color = dark ? '#a9bccb' : '#5d7488';
+  Chart.defaults.borderColor = dark ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.10)';
+  Chart.defaults.elements.arc.borderColor = dark ? '#15222e' : '#ffffff';
+}
+applyChartTheme();
+window.addEventListener('themechange', () => {
+  applyChartTheme();
+  const sec = document.getElementById('sec-dash');
+  if (sec && !sec.classList.contains('d-none')) loadDash(); // redraw charts with the new colors
+});
+
 function drawChart(id, config, hasData) {
   charts[id]?.destroy();
   $(id).classList.toggle('d-none', !hasData);
@@ -217,11 +230,39 @@ async function loadOrders() {
       : '<tr><td colspan="6" class="text-center muted py-4">No orders match these filters.</td></tr>';
   } catch (e) { fail(e); }
 }
+/* ---- CSV export of the orders currently shown (respects the filters and search) ---- */
+const csvCell = (v) => {
+  let t = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // stop Excel from running text as a formula
+  return '"' + t.replace(/"/g, '""') + '"';
+};
+function exportOrdersCsv() {
+  if (!ordersCache || !ordersCache.length) return toast('No orders to export', 'warning');
+  const head = ['Order no', 'Date placed', 'Student', 'Student ID', 'Email', 'Course', 'Pickup campus', 'Items', 'Total (PHP)', 'Order status', 'Payment method', 'Payment status', 'Reference number', 'Pickup date'];
+  const rows = ordersCache.map((o) => [
+    o.order_no, fmtDateTime(o.created_at), o.profiles?.full_name, o.profiles?.student_id, o.profiles?.university_email, o.profiles?.course,
+    o.campus?.name, (o.order_items || []).map((i) => i.product_name + ' x' + i.quantity).join('; '), Number(o.total || 0).toFixed(2),
+    (STATUS[o.status] || [o.status])[0], PAY_METHOD[o.payment_method] || o.payment_method, (PAY_STATUS[o.payment_status] || [o.payment_status])[0],
+    o.reference_number, o.pickup_date,
+  ]);
+  const csv = '\ufeff' + [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n'); // BOM so Excel reads UTF-8
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'bu-merch-orders-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Exported ' + ordersCache.length + ' orders', 'success');
+}
+$('fExport').addEventListener('click', exportOrdersCsv);
 $('fRefresh').addEventListener('click', loadOrders);
 $('fStatus').addEventListener('change', loadOrders);
 $('fPay').addEventListener('change', loadOrders);
 let qTimer; $('fQ').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(loadOrders, 350); });
 $('orderRows').addEventListener('click', (e) => { const r = e.target.closest('tr[data-id]'); if (r) openOrder(r.dataset.id); });
+
+// Same flow rules as the server (routes/orders.js): move forward or cancel; completed and cancelled are final
+const FLOW = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed'];
+const canMove = (from, to) => from === to || (to === 'cancelled' && from !== 'completed' && from !== 'cancelled') ||
+  (FLOW.includes(from) && FLOW.includes(to) && FLOW.indexOf(to) > FLOW.indexOf(from));
 
 const orderModal = new bootstrap.Modal($('orderModal'));
 async function openOrder(id) {
@@ -244,7 +285,7 @@ async function openOrder(id) {
       campusList.map((c) => '<option value="' + c.id + '"' + (c.id === o.pickup_campus_id ? ' selected' : '') + '>' + esc(c.name) + (c.is_main ? ' (Main)' : '') + '</option>').join('') + '</select><div class="form-text">Change to the Main Campus if the student must pick up there.</div></div>' +
       '<div class="col-md-6"><label class="form-label" for="omNote">Pickup note for this order (optional)</label><textarea id="omNote" class="form-control" rows="2" placeholder="Overrides the campus note in the email">' + esc(o.pickup_note || '') + '</textarea></div></div>' +
       '<div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="omStatus">Order status</label><select id="omStatus" class="form-select">' +
-      Object.entries(STATUS).map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select></div>' +
+      Object.entries(STATUS).filter(([k]) => canMove(o.status, k)).map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select></div>' +
       '<div class="col-md-4"><label class="form-label" for="omPickup">Pickup date</label><input id="omPickup" type="date" class="form-control" value="' + (o.pickup_date || '') + '"></div>' +
       '<div class="col-md-3"><button class="btn btn-gold w-100" id="omSave">Save status</button></div></div>';
 

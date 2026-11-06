@@ -5,8 +5,17 @@ const { admin } = require('../lib/supabase');
 const { requireAuth, staffOnly } = require('../middleware/auth');
 const { sendMail, templates } = require('../lib/mailer');
 const { getOrder, markPaid, syncPayment } = require('../lib/payments');
+const { detectImage } = require('../lib/imageCheck');
 
 const STATUSES = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed', 'cancelled'];
+// Allowed order flow. An order can move forward (skipping steps is fine) or be cancelled
+// until it is completed. Completed and cancelled orders are final.
+const FLOW = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed'];
+const canMove = (from, to) =>
+  from === to ||
+  (to === 'cancelled' && from !== 'completed' && from !== 'cancelled') ||
+  (FLOW.includes(from) && FLOW.includes(to) && FLOW.indexOf(to) > FLOW.indexOf(from));
+
 const PAYMENT_METHODS = ['gcash_online', 'gcash_manual', 'onsite'];
 const LIST_SELECT = '*, order_items(*), profiles(full_name, university_email, course, student_id, year_level, block, phone), campus:campuses(name)';
 
@@ -97,8 +106,10 @@ router.post('/:id/receipt', requireAuth, upload.single('receipt'), async (req, r
   if (order.payment_method !== 'gcash_manual') return res.status(400).json({ message: 'This order does not use manual GCash payment' });
   if (!req.file || !req.body.reference_number?.trim()) return res.status(400).json({ message: 'Receipt image and reference number are required' });
 
-  const filePath = `${req.user.id}/${order.id}-${Date.now()}${path.extname(req.file.originalname).toLowerCase() || '.jpg'}`;
-  const { error: upErr } = await admin.storage.from('receipts').upload(filePath, req.file.buffer, { contentType: req.file.mimetype });
+  const kind = detectImage(req.file.buffer); // check the real file type, not just the label
+  if (!kind) return res.status(400).json({ message: 'Receipt must be a JPG, PNG, GIF or WebP image' });
+  const filePath = `${req.user.id}/${order.id}-${Date.now()}${kind.ext}`;
+  const { error: upErr } = await admin.storage.from('receipts').upload(filePath, req.file.buffer, { contentType: kind.mime });
   if (upErr) return res.status(500).json({ message: 'Receipt upload failed' });
 
   await admin.from('orders').update({
@@ -113,6 +124,14 @@ router.patch('/:id/status', staffOnly, async (req, res) => {
   const { status, pickup_date, pickup_campus_id, pickup_note } = req.body;
   if (!STATUSES.includes(status)) return res.status(400).json({ message: 'Invalid status' });
 
+  const current = await getOrder(req.params.id);
+  if (!current) return res.status(404).json({ message: 'Order not found' });
+  if (!canMove(current.status, status)) {
+    const label = (s) => s.replace(/_/g, ' ');
+    return res.status(400).json({ message: `An order that is ${label(current.status)} cannot be changed to ${label(status)}.` });
+  }
+
+  if (status === 'cancelled' && current.status === 'cancelled') return res.json(current); // already cancelled, nothing to do
   if (status === 'cancelled') {
     const { error } = await admin.rpc('cancel_order', { p_order: req.params.id });
     if (error) return res.status(400).json({ message: error.message });
