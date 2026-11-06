@@ -419,3 +419,14 @@ textarea.form-control{min-height:0}
 @media(max-width:480px){
   .cd-pill{left:0;bottom:2%;padding:.55rem .8rem}
 }
+
+/* ---------- shop closed banner and maintenance screen ---------- */
+.shop-bar{padding:.55rem 1rem;text-align:center;font-size:.9rem;border-bottom:1px solid var(--line)}
+.shop-bar.closed{background:var(--orange-soft);color:var(--ink);border-bottom-color:var(--orange)}
+.shop-bar.maint{background:var(--sky);color:var(--ink)}
+.maint-screen{position:fixed;inset:0;z-index:3000;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:1.5rem;overflow:auto}
+.maint-card{max-width:460px;text-align:center}
+.maint-card h1{font-size:1.8rem;margin:1rem 0 .5rem}
+.maint-card p{color:var(--muted);margin-bottom:1.5rem}
+.maint-ico{width:72px;height:72px;border-radius:50%;background:var(--sky);color:var(--link);display:inline-flex;align-items:center;justify-content:center}
+.maint-ico svg{width:34px;height:34px}

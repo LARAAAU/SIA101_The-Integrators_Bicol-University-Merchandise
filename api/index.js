@@ -26,6 +26,7 @@ app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
+app.use('/api', require('../middleware/shopStatus').maintenanceGate); // maintenance mode: only staff and admin pass
 app.use('/api/auth', require('../routes/auth'));
 app.use('/api/products', require('../routes/products'));
 app.use('/api/campuses', require('../routes/campuses'));

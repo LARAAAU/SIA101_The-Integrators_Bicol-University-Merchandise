@@ -8,7 +8,8 @@
 5. Run `db/migration-04-locations-middlename.sql` (adds the real BU colleges and campuses as pickup locations and middle names).
 6. Run `db/migration-05-payment-gateway.sql` (renames the checkout id column so any payment provider works).
 7. Run `db/migration-06-payment-settings.sql` (adds the editable GCash account for manual payments; set it in Admin > Payment settings).
-8. (Optional) Run `db/seed.sql` for sample products.
+8. Run `db/migration-07-shop-settings.sql` (adds the shop open/closed switch and maintenance mode; set them in Admin > Shop status).
+9. (Optional) Run `db/seed.sql` for sample products.
 7. **Project Settings > API**: copy `Project URL`, `anon` key, and `service_role` key.
    The service_role key is a secret. Never put it in frontend code or commit it.
 

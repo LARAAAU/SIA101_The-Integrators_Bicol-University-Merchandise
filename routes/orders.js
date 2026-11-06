@@ -6,6 +6,7 @@ const { requireAuth, staffOnly } = require('../middleware/auth');
 const { sendMail, templates } = require('../lib/mailer');
 const { getOrder, markPaid, syncPayment } = require('../lib/payments');
 const { detectImage } = require('../lib/imageCheck');
+const { requireShopOpen } = require('../middleware/shopStatus');
 
 const STATUSES = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed', 'cancelled'];
 // Allowed order flow. An order can move forward (skipping steps is fine) or be cancelled
@@ -37,7 +38,7 @@ async function withReceiptUrl(order) {
 }
 
 // POST /api/orders  { items:[{product_id, quantity}], payment_method }
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireShopOpen, async (req, res) => {
   const { items, payment_method, campus_id } = req.body;
   if (!campus_id) return res.status(400).json({ message: 'Please choose a pickup campus' });
   if (!Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Your cart is empty' });

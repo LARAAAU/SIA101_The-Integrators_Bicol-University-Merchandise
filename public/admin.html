@@ -14,6 +14,7 @@
       <button class="ux-nav" data-tab="products"><i class="ico" data-i="tag"></i>Products</button>
       <button class="ux-nav" data-tab="campuses"><i class="ico" data-i="pin"></i>Pickup locations</button>
       <button class="ux-nav" data-tab="payment" id="tabPayment"><i class="ico" data-i="wallet"></i>Payment settings</button>
+      <button class="ux-nav" data-tab="shop" id="tabShop"><i class="ico" data-i="home"></i>Shop status</button>
       <button class="ux-nav" data-tab="users" id="tabUsers"><i class="ico" data-i="users"></i>Users</button>
       <a class="ux-nav out" href="/index.html"><i class="ico" data-i="home"></i>View shop</a>
     </nav></aside>
@@ -84,6 +85,25 @@
         </form>
       </section>
 
+      <!-- SHOP STATUS -->
+      <section id="sec-shop" class="d-none">
+        <form class="ux-card" id="shopForm">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="home"></i></span><div class="grow"><h2>Shop status</h2><p>Pause new orders or put the whole site into maintenance. Staff and admin can always use the site.</p></div></div>
+          <div class="ux-body">
+            <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="shopOpen"><label class="form-check-label fw-bold" for="shopOpen">Shop is open for new orders</label></div>
+            <div class="muted small mb-3">Turn this off to stop students from placing orders. They can still browse, fill their cart and see their existing orders.</div>
+            <label class="form-label" for="closedMsg">Message when the shop is closed (optional)</label>
+            <textarea id="closedMsg" class="form-control mb-4" rows="2" maxlength="300" placeholder="e.g. Pre-orders are closed. We will open again on December 1."></textarea>
+
+            <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="maintOn"><label class="form-check-label fw-bold" for="maintOn">Maintenance mode</label></div>
+            <div class="muted small mb-3">Students see a "We'll be right back" screen and cannot use the site. Use this while you update the system.</div>
+            <label class="form-label" for="maintMsg">Maintenance message (optional)</label>
+            <textarea id="maintMsg" class="form-control" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
+          </div>
+          <div class="ux-foot"><button class="btn btn-ms" id="shopSave">Save changes</button></div>
+        </form>
+      </section>
+
       <!-- USERS -->
       <section id="sec-users" class="d-none">
         <div class="ux-card">
@@ -147,17 +167,17 @@ const $ = (id) => document.getElementById(id);
 if (requireLogin(true)) init();
 
 function init() {
-  if (Auth.user().role !== 'admin') { $('tabUsers').remove(); $('tabPayment').remove(); }
+  if (Auth.user().role !== 'admin') { $('tabUsers').remove(); $('tabPayment').remove(); $('tabShop').remove(); }
   $('tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
   show('dash');
 }
 
 function show(name) {
-  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', payment: 'Payment settings', users: 'Users' };
+  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', payment: 'Payment settings', shop: 'Shop status', users: 'Users' };
   document.querySelectorAll('#tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name];
-  ['dash', 'orders', 'products', 'campuses', 'payment', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
-  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, payment: loadPayment, users: loadUsers })[name]();
+  ['dash', 'orders', 'products', 'campuses', 'payment', 'shop', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
+  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, payment: loadPayment, shop: loadShopForm, users: loadUsers })[name]();
 }
 
 /* ---------------- Dashboard ---------------- */
@@ -432,6 +452,25 @@ $('payForm').addEventListener('submit', async (e) => {
     $('gName').value = s.gcash_name; $('gNumber').value = s.gcash_number; $('gNote').value = s.gcash_note || ''; previewGcash();
     toast('GCash account saved', 'success');
   } catch (err) { fail(err); } finally { $('gSave').disabled = false; }
+});
+
+/* ---------------- Shop status (admin only) ---------------- */
+function fillShopForm(s) {
+  $('shopOpen').checked = !!s.is_open; $('closedMsg').value = s.closed_message || '';
+  $('maintOn').checked = !!s.maintenance_mode; $('maintMsg').value = s.maintenance_message || '';
+}
+async function loadShopForm() {
+  try { fillShopForm(await api('/settings/shop')); } catch (e) { fail(e); }
+}
+$('shopForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if ($('maintOn').checked && !confirm('Turn on maintenance mode? Students will not be able to use the site until you turn it off.')) return;
+  $('shopSave').disabled = true;
+  try {
+    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value } });
+    fillShopForm(s); applyShopStatus();
+    toast('Shop status saved', 'success');
+  } catch (err) { fail(err); } finally { $('shopSave').disabled = false; }
 });
 
 /* ---------------- Users (admin only) ---------------- */

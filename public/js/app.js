@@ -81,7 +81,10 @@ async function api(path, { method = 'GET', body, form, auth = true } = {}) {
     res = await fetch(API + path, opt);
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Something went wrong');
+  if (!res.ok) {
+    if (res.status === 503 && data.maintenance) { showMaintenance(data); const m = new Error(data.message); m.maintenance = true; throw m; }
+    throw new Error(data.message || 'Something went wrong');
+  }
   return data;
 }
 
@@ -106,6 +109,51 @@ const Cart = {
 };
 function updateCartBadge() { const b = document.getElementById('cartBadge'); if (b) { const n = Cart.count(); b.textContent = n; b.hidden = n === 0; } }
 
+/* ---------- Shop open/closed and maintenance mode (set by admin in Admin > Shop status) ---------- */
+let SHOP = null;
+async function loadShop() {
+  try { const r = await fetch(API + '/settings/shop', { cache: 'no-store' }); return r.ok ? await r.json() : null; } catch { return null; }
+}
+function showMaintenance(info) {
+  if (document.getElementById('maintScreen')) return;
+  const u = Auth.user();
+  const el = document.createElement('div');
+  el.id = 'maintScreen'; el.className = 'maint-screen';
+  el.innerHTML = `${Theme.buttonHTML('floating')}
+    <div class="maint-card">
+      <div class="maint-ico">${ico('lock')}</div>
+      <h1>We'll be right back</h1>
+      <p>${esc(info.message || info.maintenance_message || 'The shop is under maintenance. Please check back soon.')}</p>
+      <div class="d-flex gap-2 justify-content-center flex-wrap">
+        <button class="btn btn-ms" onclick="location.reload()">Try again</button>
+        ${u ? '<button class="btn btn-outline-ms" id="maintLogout">Log out</button>' : '<a class="btn btn-outline-ms" href="/login.html">Staff log in</a>'}
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  document.body.style.overflow = 'hidden';
+  document.getElementById('maintLogout')?.addEventListener('click', Auth.logout);
+}
+async function applyShopStatus() {
+  const s = SHOP = await loadShop(); if (!s) return;
+  const staff = Auth.isStaff();
+  if (s.maintenance_mode && !staff) return showMaintenance(s);
+
+  const bars = [];
+  if (s.maintenance_mode) bars.push('<div class="shop-bar maint"><b>Maintenance mode is on.</b> Students cannot use the shop right now. You can because you are staff.</div>');
+  if (!s.is_open) bars.push(`<div class="shop-bar closed"><b>Shop closed.</b> ${esc(s.closed_message || 'New orders are paused right now. You can still browse and fill your cart.')}${staff ? ' <span class="opacity-75">(Staff can still place orders.)</span>' : ''}</div>`);
+  document.getElementById('shopBars')?.remove();
+  if (bars.length) document.querySelector('#nav .announce')?.insertAdjacentHTML('afterend', `<div id="shopBars">${bars.join('')}</div>`);
+
+  if (!s.is_open && !staff) {
+    document.querySelectorAll('#placeBtn').forEach((b) => { b.disabled = true; b.textContent = 'Shop closed'; });
+  }
+}
+// Safety net: block "Place order" for students while the shop is closed (the server blocks it too)
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('#placeBtn');
+  if (b && SHOP && !SHOP.is_open && !Auth.isStaff()) { e.preventDefault(); e.stopImmediatePropagation(); toast(SHOP.closed_message || 'The shop is closed for new orders right now.', 'warning'); }
+}, true);
+
 /* ---------- UI helpers ---------- */
 function toast(msg, type = 'dark') {
   let box = document.getElementById('toasts');
@@ -118,7 +166,7 @@ function toast(msg, type = 'dark') {
   const t = new bootstrap.Toast(el, { delay: 3500 }); t.show();
   el.addEventListener('hidden.bs.toast', () => el.remove());
 }
-const fail = (e) => toast(e.message || String(e), 'danger');
+const fail = (e) => { if (e && e.maintenance) return; toast(e.message || String(e), 'danger'); };
 
 function renderNav(active) {
   const u = Auth.user();
@@ -161,6 +209,7 @@ function renderNav(active) {
   document.getElementById('logoutBtn')?.addEventListener('click', Auth.logout);
   document.getElementById('acctBtn')?.addEventListener('show.bs.dropdown', loadAcctOrders);
   updateCartBadge();
+  applyShopStatus();
 }
 
 // Fills the account menu with the order count and the 3 most recent orders
