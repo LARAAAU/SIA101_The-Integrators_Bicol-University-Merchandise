@@ -51,6 +51,7 @@ function drawCats() {
   document.getElementById('cats').innerHTML = CATS.map(([n, i]) =>
     '<button class="cat ' + (n === cat ? 'on' : '') + '" data-c="' + n + '" role="tab" aria-selected="' + (n === cat) + '"><div class="ico">' + i + '</div>' + n + '</button>').join('');
 }
+
 function card(p) {
   const closed = p.preorder_deadline && new Date(p.preorder_deadline) < new Date();
   const soldOut = p.stock <= 0, low = !soldOut && p.stock <= p.low_stock_threshold;
@@ -61,14 +62,20 @@ function card(p) {
     (low ? '<span class="tag few">Few left</span>' : isNew && !off ? '<span class="tag new">New</span>' : '') + '</div>' +
     '<div class="body"><div class="muted small">' + esc(p.category) + '</div><div class="fw-bold">' + esc(p.name) + '</div>' +
     '<div class="muted small">' + (soldOut ? 'Sold out' : closed ? 'Pre-order closed' : (p.preorder_deadline ? 'Closes ' + fmtDate(p.preorder_deadline) : p.stock + ' available')) + '</div>' +
-    '<div class="row-end"><div class="price">' + peso(p.price) + '</div><button class="add" data-id="' + p.id + '" aria-label="Add ' + esc(p.name) + ' to cart"' + (off ? ' disabled' : '') + '>+</button></div></div></div></div>';
+    '<div class="row-end"><div class="price">' + peso(p.price) + '</div></div>' +
+    '<div class="actions">' +
+      '<button class="btn btn-gold buy" data-buy="' + p.id + '"' + (off ? ' disabled' : '') + '>Order now</button>' +
+      '<button class="add" data-id="' + p.id + '" aria-label="Add ' + esc(p.name) + ' to cart"' + (off ? ' disabled' : '') + '>+</button>' +
+    '</div></div></div></div>';
 }
+
 function drawGrid() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const list = products.filter((p) => (cat === 'All' || p.category === cat) && (!q || p.name.toLowerCase().includes(q)));
   document.getElementById('grid').innerHTML = list.length ? list.map(card).join('')
     : '<div class="col-12"><div class="panel text-center muted">' + (products.length ? 'Nothing matches your search.' : 'No merch yet. Staff can add products from the Admin page.') + '</div></div>';
 }
+
 function tick() {
   const el = document.getElementById('countdown');
   if (!deadline) return;
@@ -80,10 +87,18 @@ function tick() {
 
 document.getElementById('cats').addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (b) { cat = b.dataset.c; drawCats(); drawGrid(); } });
 document.getElementById('search').addEventListener('input', drawGrid);
+
+// "+" button: add to cart and stay on the page
 document.getElementById('grid').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-id]'); if (!b) return;
   const p = products.find((x) => x.id === b.dataset.id);
   Cart.add(p) ? toast(p.name + ' added to cart', 'success') : toast('You already have all the available stock in your cart', 'warning');
+});
+
+// "Order now" button: go straight to the checkout page for this one product (the cart is not used)
+document.getElementById('grid').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-buy]'); if (!b) return;
+  location.href = '/checkout.html?product=' + encodeURIComponent(b.dataset.buy);
 });
 
 (async () => {

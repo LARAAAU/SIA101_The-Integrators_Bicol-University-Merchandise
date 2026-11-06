@@ -344,3 +344,9 @@ textarea.form-control{min-height:0}
   .ux-table.stack td:nth-child(6){grid-column:2;grid-row:4;text-align:right;margin-top:.35rem}
   .ux-table.stack td[colspan]{grid-column:1/-1}
 }
+
+/* product card: Order now + add to cart */
+.product .actions{display:flex;align-items:center;gap:.5rem;padding-top:.6rem}
+.product .buy{flex:1;height:42px;padding:0 .75rem;font-size:.9rem;white-space:nowrap}
+.product .buy:disabled{background:var(--sky-2);border-color:var(--sky-2);color:#8fa3b3}
+.product .row-end{padding-top:.25rem}
