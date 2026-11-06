@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { admin, anon } = require('../lib/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { rateLimit } = require('../middleware/rateLimit');
+const { sendMail } = require('../lib/mailer');
 
 const MIN = 60 * 1000;
 // Login: 10 tries per email per 15 min, and 60 per IP per 15 min (campus Wi-Fi shares IPs, so the IP cap is loose)
@@ -9,6 +10,10 @@ const loginPerAccount = rateLimit({ windowMs: 15 * MIN, max: 10, key: (req) => `
 const loginPerIp = rateLimit({ windowMs: 15 * MIN, max: 60, key: (req) => `ip|${req.ip}` });
 const registerLimit = rateLimit({ windowMs: 60 * MIN, max: 10, key: (req) => `reg|${req.ip}`, message: 'Too many sign-up attempts. Please try again later.' });
 const profileLimit = rateLimit({ windowMs: 15 * MIN, max: 30, key: (req) => `me|${req.user?.id || req.ip}` });
+// Password reset: 5 emails per address per hour, 20 per IP per hour
+const forgotPerEmail = rateLimit({ windowMs: 60 * MIN, max: 5, key: (req) => `forgot|${String(req.body?.email || '').trim().toLowerCase()}`, message: 'Too many reset requests. Please try again later.' });
+const forgotPerIp = rateLimit({ windowMs: 60 * MIN, max: 20, key: (req) => `forgot-ip|${req.ip}`, message: 'Too many reset requests. Please try again later.' });
+const resetLimit = rateLimit({ windowMs: 15 * MIN, max: 10, key: (req) => `reset|${req.ip}`, message: 'Too many attempts. Please try again later.' });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^(\+?63|0)9\d{9}$/;
@@ -99,6 +104,56 @@ router.post('/refresh', async (req, res) => {
     refresh_token: data.session.refresh_token,
     expires_at: data.session.expires_at,
   });
+});
+
+// POST /api/auth/forgot  { email }
+// Creates a one-time reset link with Supabase and emails it with our own mailer.
+// The answer is always the same, so nobody can use this form to find out which emails have accounts.
+router.post('/forgot', forgotPerIp, forgotPerEmail, async (req, res) => {
+  const email = clean(req.body?.email).toLowerCase();
+  const reply = { message: 'If that email has an account, a reset link is on its way.' };
+  if (!EMAIL_RE.test(email)) return res.json(reply);
+
+  try {
+    const base = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: 'recovery', email, options: { redirectTo: base + '/reset-password.html' },
+    });
+    if (error || !data?.properties?.action_link) {
+      console.error('[forgot] no link for', email, '-', error?.message || 'no link returned'); // usually: no account with this email
+      return res.json(reply);
+    }
+    const link = data.properties.action_link;
+    await sendMail({
+      to: email,
+      subject: 'Reset your BU Merch password',
+      html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#12324a">
+        <h2 style="margin-bottom:4px">BU <span style="color:#f28c28">Merch</span></h2>
+        <p>We got a request to reset your password. Click the button below to choose a new one.</p>
+        <p style="margin:24px 0"><a href="${link}" style="background:#2b7bb9;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:bold">Reset password</a></p>
+        <p style="color:#5d7488;font-size:13px">This link works once and expires soon. If you did not ask for this, you can ignore this email and your password stays the same.</p>
+      </div>`,
+    });
+    console.log('[forgot] reset email handled for', email);
+  } catch (e) {
+    console.error('[forgot]', e.message);
+  }
+  res.json(reply);
+});
+
+// POST /api/auth/reset  { access_token, password }
+// access_token is the temporary token from the emailed link. It is checked with Supabase before the password is changed.
+router.post('/reset', resetLimit, async (req, res) => {
+  const { access_token, password } = req.body || {};
+  if (!access_token) return res.status(400).json({ message: 'This reset link is invalid or has expired.' });
+  if (!password || String(password).length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters' });
+
+  const { data, error } = await admin.auth.getUser(String(access_token));
+  if (error || !data?.user) return res.status(400).json({ message: 'This reset link is invalid or has expired.' });
+
+  const { error: uErr } = await admin.auth.admin.updateUserById(data.user.id, { password: String(password) });
+  if (uErr) return res.status(400).json({ message: uErr.message });
+  res.json({ message: 'Password updated. Please log in.' });
 });
 
 // GET /api/auth/me

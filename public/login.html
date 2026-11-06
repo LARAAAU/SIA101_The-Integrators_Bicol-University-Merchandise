@@ -16,8 +16,19 @@
       <label for="lPass">Password</label>
       <div class="pw"><input id="lPass" type="password" class="pill" autocomplete="current-password" required>
         <button type="button" class="eye" data-eye="lPass" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <div class="text-end small mb-2" style="margin-top:-.3rem"><a href="#forgot" data-mode="forgot">Forgot password?</a></div>
       <button class="pill-btn" id="lBtn">Log in</button>
       <p class="swap">New here? <a href="#signup" data-mode="signup">Create an account</a></p>
+    </form>
+
+    <!-- FORGOT PASSWORD -->
+    <form id="viewForgot" class="d-none" novalidate>
+      <h1>Forgot password?</h1>
+      <p class="muted small mb-3">Enter the email you signed up with and we will send you a link to set a new password.</p>
+      <label for="fEmail">Email</label>
+      <input id="fEmail" type="email" class="pill" autocomplete="email" required>
+      <button class="pill-btn" id="fBtn">Send reset link</button>
+      <p class="swap"><a href="#login" data-mode="login">&larr; Back to log in</a></p>
     </form>
 
     <!-- SIGN UP (3 short steps) -->
@@ -90,19 +101,21 @@ const $ = (id) => document.getElementById(id);
 const next = new URLSearchParams(location.search).get('next');
 let step = 0, campusesLoaded = false;
 
-/* ----- switch between log in and sign up ----- */
+/* ----- switch between log in, forgot password and sign up ----- */
 function setMode(mode) {
-  const signup = mode === 'signup';
-  $('viewLogin').classList.toggle('d-none', signup);
-  $('viewSignup').classList.toggle('d-none', !signup);
-  document.title = signup ? 'BU Merch - Create account' : 'BU Merch - Log in';
-  if (signup && !campusesLoaded) loadCampuses();
+  if (!['login', 'signup', 'forgot'].includes(mode)) mode = 'login';
+  $('viewLogin').classList.toggle('d-none', mode !== 'login');
+  $('viewForgot').classList.toggle('d-none', mode !== 'forgot');
+  $('viewSignup').classList.toggle('d-none', mode !== 'signup');
+  document.title = { login: 'BU Merch - Log in', signup: 'BU Merch - Create account', forgot: 'BU Merch - Reset password' }[mode];
+  if (mode === 'signup' && !campusesLoaded) loadCampuses();
+  if (mode === 'forgot' && !$('fEmail').value) $('fEmail').value = $('lEmail').value;
 }
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-mode]'); if (!a) return;
   e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.mode); setMode(a.dataset.mode);
 });
-setMode(location.hash === '#signup' ? 'signup' : 'login');
+setMode(location.hash.slice(1));
 
 /* ----- show / hide password ----- */
 document.querySelectorAll('[data-eye]').forEach((b) => b.addEventListener('click', () => {
@@ -119,6 +132,20 @@ async function doLogin(email, password) {
 $('viewLogin').addEventListener('submit', async (e) => {
   e.preventDefault(); const b = $('lBtn'); b.disabled = true;
   try { await doLogin($('lEmail').value.trim(), $('lPass').value); } catch (err) { fail(err); b.disabled = false; }
+});
+
+/* ----- forgot password ----- */
+$('viewForgot').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('fEmail').value.trim();
+  if (!$('fEmail').checkValidity() || !email) { $('fEmail').reportValidity(); return; }
+  const b = $('fBtn'); b.disabled = true; b.textContent = 'Sending...';
+  try {
+    await api('/auth/forgot', { method: 'POST', auth: false, body: { email } });
+    toast('If that email has an account, a reset link is on its way. Check your inbox and spam folder.', 'success');
+    b.textContent = 'Link sent';
+    setTimeout(() => { b.disabled = false; b.textContent = 'Send reset link'; }, 30000); // wait before allowing another send
+  } catch (err) { fail(err); b.disabled = false; b.textContent = 'Send reset link'; }
 });
 
 /* ----- sign up wizard ----- */

@@ -407,3 +407,15 @@ textarea.form-control{min-height:0}
 .gcash-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.45rem}
 .gcash-row>span{min-width:110px}
 .gcash-num{font-family:'Unbounded',sans-serif;font-size:1.05rem;letter-spacing:.02em}
+
+/* live countdown: scales with the screen and the digits don't jump */
+.cd-pill{min-width:0;width:max-content;max-width:calc(100% - 8px)}
+.cd-pill .display-num{
+  font-size:clamp(1rem,4.2vw,1.5rem);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.cd-pill small{display:block;font-size:clamp(.7rem,2.6vw,.85rem)}
+@media(max-width:480px){
+  .cd-pill{left:0;bottom:2%;padding:.55rem .8rem}
+}

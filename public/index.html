@@ -81,8 +81,9 @@ function tick() {
   if (!deadline) return;
   const ms = deadline.at - Date.now();
   if (ms <= 0) { el.innerHTML = '<small>Pre-order closed for ' + esc(deadline.name) + '</small>'; return; }
-  const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
-  el.innerHTML = '<small>Next pre-order closes in</small><div class="display-num">' + d + 'd ' + h + 'h ' + m + 'm</div><small>' + esc(deadline.name) + '</small>';
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4), s = Math.floor(ms % 6e4 / 1e3);
+  const pad = (n) => String(n).padStart(2, '0');
+  el.innerHTML = '<small>Next pre-order closes in</small><div class="display-num">' + (d > 0 ? d + 'd ' : '') + pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's</div><small>' + esc(deadline.name) + '</small>';
 }
 
 document.getElementById('cats').addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (b) { cat = b.dataset.c; drawCats(); drawGrid(); } });
@@ -109,7 +110,7 @@ document.getElementById('grid').addEventListener('click', (e) => {
     products.slice(0, 3).forEach((p, i) => { document.getElementById('h' + (i + 1)).innerHTML = p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : esc(p.name.charAt(0)); });
     const open = products.filter((p) => p.preorder_deadline && new Date(p.preorder_deadline) > new Date() && p.stock > 0)
       .sort((a, b) => new Date(a.preorder_deadline) - new Date(b.preorder_deadline))[0];
-    if (open) { deadline = { at: new Date(open.preorder_deadline).getTime(), name: open.name }; tick(); setInterval(tick, 30000); }
+    if (open) { deadline = { at: new Date(open.preorder_deadline).getTime(), name: open.name }; tick(); setInterval(tick, 1000); }
     else document.getElementById('countdown').innerHTML = '<small>No pre-order deadline running</small>';
   } catch (e) { fail(e); }
 })();
