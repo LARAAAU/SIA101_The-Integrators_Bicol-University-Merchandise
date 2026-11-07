@@ -15,6 +15,7 @@
       <button class="ux-nav" data-tab="campuses"><i class="ico" data-i="pin"></i>Pickup locations</button>
       <button class="ux-nav" data-tab="payment" id="tabPayment"><i class="ico" data-i="wallet"></i>Payment settings</button>
       <button class="ux-nav" data-tab="shop" id="tabShop"><i class="ico" data-i="home"></i>Shop status</button>
+      <button class="ux-nav" data-tab="audit" id="tabAudit"><i class="ico" data-i="shield"></i>Audit log</button>
       <button class="ux-nav" data-tab="users" id="tabUsers"><i class="ico" data-i="users"></i>Users</button>
       <a class="ux-nav out" href="/index.html"><i class="ico" data-i="home"></i>View shop</a>
     </nav></aside>
@@ -22,6 +23,7 @@
     <div class="min-w-0">
       <!-- DASHBOARD -->
       <section id="sec-dash">
+        <div id="lowBox"></div>
         <div class="row g-3 mb-3" id="stats"></div>
         <div class="row g-3">
           <div class="col-12"><div class="ux-card mb-0"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="chart"></i></span><div><h2>Sales</h2><p>Revenue and orders in the last 30 days</p></div></div>
@@ -104,6 +106,17 @@
         </form>
       </section>
 
+      <!-- AUDIT LOG (admin only) -->
+      <section id="sec-audit" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="shield"></i></span><div class="grow"><h2>Audit log</h2><p>Who changed what, and when. Newest first.</p></div>
+            <button class="btn btn-outline-ms btn-sm px-3" id="auRefresh">Refresh</button></div>
+          <div class="ux-body pb-3"><div class="ux-in"><i class="ico" data-i="search"></i><input id="auQ" placeholder="Search by person, action or item" aria-label="Search audit log"></div></div>
+          <div class="ux-tablewrap"><table class="ux-table"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Details</th></tr></thead><tbody id="auRows"></tbody></table></div>
+          <div class="ux-foot"><button class="btn btn-outline-ms btn-sm px-3" id="auMore" hidden>Load more</button></div>
+        </div>
+      </section>
+
       <!-- USERS -->
       <section id="sec-users" class="d-none">
         <div class="ux-card">
@@ -167,17 +180,17 @@ const $ = (id) => document.getElementById(id);
 if (requireLogin(true)) init();
 
 function init() {
-  if (Auth.user().role !== 'admin') { $('tabUsers').remove(); $('tabPayment').remove(); $('tabShop').remove(); }
+  if (Auth.user().role !== 'admin') { $('tabUsers').remove(); $('tabPayment').remove(); $('tabShop').remove(); $('tabAudit').remove(); }
   $('tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
   show('dash');
 }
 
 function show(name) {
-  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', payment: 'Payment settings', shop: 'Shop status', users: 'Users' };
+  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', payment: 'Payment settings', shop: 'Shop status', audit: 'Audit log', users: 'Users' };
   document.querySelectorAll('#tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name];
-  ['dash', 'orders', 'products', 'campuses', 'payment', 'shop', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
-  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, payment: loadPayment, shop: loadShopForm, users: loadUsers })[name]();
+  ['dash', 'orders', 'products', 'campuses', 'payment', 'shop', 'audit', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
+  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, payment: loadPayment, shop: loadShopForm, audit: loadAudit, users: loadUsers })[name]();
 }
 
 /* ---------------- Dashboard ---------------- */
@@ -209,6 +222,16 @@ async function loadDash() {
     $('stats').innerHTML = card('Revenue (paid)', peso(t.revenue), 'good') + card('Total orders', t.orders) +
       card('Awaiting payment', t.pending_payments, t.pending_payments ? 'warn' : '') + card('Shipped', t.in_transit) + card('Ready for pickup', t.ready_for_pickup) +
       card('Low stock', s.low_stock, s.low_stock ? 'warn' : '');
+
+    // Low-stock notice: lists the products that are running low or sold out
+    try {
+      const ps = await api('/products/all');
+      const low = ps.filter((p) => p.is_active && p.stock <= (p.low_stock_threshold ?? 5));
+      $('lowBox').innerHTML = low.length
+        ? '<div class="reminder small mb-3"><b>Low stock:</b> ' + low.map((p) => esc(p.name) + ' (' + (p.stock <= 0 ? 'sold out' : p.stock + ' left') + ')').join(', ') +
+          ' <button class="link-btn ms-1" type="button" onclick="show(\'products\')">Open Products</button></div>'
+        : '';
+    } catch {}
 
     const days = s.revenue_by_day;
     drawChart('chRevenue', {
@@ -315,8 +338,6 @@ async function openOrder(id) {
       '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + peso(o.total) + '</th></tr></tfoot></table>' +
       '<div class="panel mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><div><div class="muted small">Payment</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div></div><div>' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
       (o.reference_number ? '<div class="mt-2 small">Reference number: <b>' + esc(o.reference_number) + '</b></div>' : '') +
-      ((o.payments || []).filter((p) => ['duplicate', 'refund_needed'].includes(p.status)).map((p) => '<div class="alert alert-danger mt-2 mb-0 small"><b>' + (p.status === 'duplicate' ? 'Paid twice.' : 'Paid after the order was cancelled.') + '</b> ' + peso(p.amount) + ' must be refunded to the student. Provider: ' + esc(p.provider) + ', reference: ' + esc(p.provider_ref || '-') + '.</div>').join('')) +
-      ((o.payments || []).length ? '<details class="mt-2 small"><summary class="muted">Payment records (' + o.payments.length + ')</summary><table class="table table-sm mb-0"><tbody>' + o.payments.map((p) => '<tr><td>' + fmtDateTime(p.created_at) + '</td><td>' + esc(p.provider) + '</td><td>' + esc(p.status) + '</td><td class="text-end">' + peso(p.amount) + '</td></tr>').join('') + '</tbody></table></details>' : '') +
       (o.receipt_url ? '<div class="mt-2"><a href="' + esc(o.receipt_url) + '" target="_blank" rel="noopener"><img src="' + esc(o.receipt_url) + '" alt="GCash receipt" style="max-height:220px;border-radius:8px;border:1px solid var(--line)"></a></div>' : '') +
       (canMarkPaid ? '<div class="mt-3 d-flex gap-2"><button class="btn btn-sm btn-ms" id="omPaid">' + (o.payment_method === 'onsite' ? 'Confirm cash received' : 'Mark as paid') + '</button>' +
         (o.payment_status === 'pending_verification' ? '<button class="btn btn-sm btn-outline-danger" id="omFail">Reject receipt</button>' : '') + '</div>' : '') + '</div>' +
@@ -474,6 +495,30 @@ $('shopForm').addEventListener('submit', async (e) => {
     toast('Shop status saved', 'success');
   } catch (err) { fail(err); } finally { $('shopSave').disabled = false; }
 });
+
+/* ---------------- Audit log (admin only) ---------------- */
+let auNext = null;
+const auDetails = (d) => d ? (Object.entries(d).map(([k, v]) => esc(k.replace(/_/g, ' ')) + ': ' + esc(typeof v === 'object' ? JSON.stringify(v) : v)).join(' · ') || '-') : '-';
+async function loadAudit(more = false) {
+  try {
+    const q = new URLSearchParams();
+    if ($('auQ').value.trim()) q.set('q', $('auQ').value.trim());
+    if (more === true && auNext) q.set('offset', auNext);
+    const out = await api('/audit?' + q.toString());
+    const html = out.rows.map((r) =>
+      '<tr><td class="nw">' + fmtDateTime(r.created_at) + '</td>' +
+      '<td><div class="fw-medium">' + esc(r.actor_name || '-') + '</div><div class="muted small">' + esc(r.actor_role || '') + '</div></td>' +
+      '<td class="fw-bold">' + esc(r.action) + '</td><td>' + esc(r.target_label || '-') + '</td>' +
+      '<td class="small muted" style="max-width:340px;overflow-wrap:anywhere">' + auDetails(r.details) + '</td></tr>').join('');
+    if (more === true) $('auRows').insertAdjacentHTML('beforeend', html);
+    else $('auRows').innerHTML = html || '<tr><td colspan="5" class="text-center muted py-4">Nothing logged yet.</td></tr>';
+    auNext = out.next;
+    $('auMore').hidden = out.next == null;
+  } catch (e) { fail(e); }
+}
+$('auRefresh').addEventListener('click', () => loadAudit());
+$('auMore').addEventListener('click', () => loadAudit(true));
+let auTimer; $('auQ').addEventListener('input', () => { clearTimeout(auTimer); auTimer = setTimeout(() => loadAudit(), 350); });
 
 /* ---------------- Users (admin only) ---------------- */
 async function loadUsers() {
