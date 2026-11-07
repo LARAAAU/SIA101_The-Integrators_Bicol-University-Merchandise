@@ -29,6 +29,7 @@ app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
+app.use('/api/cron', require('../routes/cron')); // scheduled jobs (own secret, before the maintenance gate)
 app.use('/api', auditHook); // audit log: records successful changes made by staff and admin
 app.use('/api', require('../middleware/shopStatus').maintenanceGate); // maintenance mode: only staff and admin pass
 app.use('/api/auth', require('../routes/auth'));

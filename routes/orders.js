@@ -6,6 +6,8 @@ const { requireAuth, staffOnly } = require('../middleware/auth');
 const { sendMail, templates } = require('../lib/mailer');
 const { getOrder, markPaid, syncPayment } = require('../lib/payments');
 const { detectImage } = require('../lib/imageCheck');
+const { logEvent, getEvents } = require('../lib/orderEvents');
+const { sendReminder } = require('../lib/pickupReminders');
 const { requireShopOpen } = require('../middleware/shopStatus');
 
 const STATUSES = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed', 'cancelled'];
@@ -59,6 +61,7 @@ router.post('/', requireAuth, requireShopOpen, async (req, res) => {
   if (error) return res.status(400).json({ message: error.message });
 
   const order = await getOrder(orderId);
+  await logEvent(orderId, { event: 'placed', to: 'pending', actor: req.user, note: 'Order placed' });
   await sendMail({ to: req.user.university_email, ...templates.orderPlaced(order) });
   res.status(201).json(order);
 });
@@ -97,6 +100,7 @@ router.get('/:id', requireAuth, async (req, res) => {
   if (order.student_id !== req.user.id && !isStaff(req.user)) return res.status(403).json({ message: 'Not your order' });
 
   if (order.payment_method === 'gcash_online' && order.payment_status !== 'paid') order = await syncPayment(order);
+  order.events = await getEvents(order.id, { forStaff: isStaff(req.user) }); // status timeline
   if (isStaff(req.user)) { // payment records (including paid-twice and refund-needed) are for staff only
     const { data: pays } = await admin.from('payments').select('provider, provider_ref, amount, status, created_at').eq('order_id', order.id).order('created_at');
     order.payments = pays || [];
@@ -124,6 +128,7 @@ router.post('/:id/receipt', requireAuth, upload.single('receipt'), async (req, r
     receipt_path: filePath, reference_number: req.body.reference_number.trim(),
     payment_status: 'pending_verification', updated_at: new Date().toISOString(),
   }).eq('id', order.id);
+  await logEvent(order.id, { event: 'receipt', actor: req.user, note: 'Receipt uploaded, waiting for staff to verify' });
   res.json(await getOrder(order.id));
 });
 
@@ -153,6 +158,15 @@ router.patch('/:id/status', staffOnly, async (req, res) => {
   }
   const order = await getOrder(req.params.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
+  // Timeline: a status change, and/or a new pickup date (a date-only change is logged on its own line)
+  const dateChanged = status !== 'cancelled' && pickup_date && pickup_date !== current.pickup_date;
+  const prettyDate = dateChanged ? new Date(pickup_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const dateNote = dateChanged ? (current.pickup_date ? 'Pickup date changed to ' : 'Pickup date set to ') + prettyDate : null;
+  if (status !== current.status) {
+    await logEvent(order.id, { event: 'status', from: current.status, to: status, actor: req.user, note: dateNote });
+  } else if (dateChanged) {
+    await logEvent(order.id, { event: 'status', from: current.status, to: current.status, actor: req.user, note: dateNote });
+  }
   await sendMail({ to: order.profiles?.university_email, ...templates.statusChanged(order) });
   res.json(order);
 });
@@ -168,12 +182,24 @@ router.patch('/:id/payment', staffOnly, async (req, res) => {
 
   if (payment_status === 'paid') {
     // Safe to press twice: a payment is only recorded once
-    return res.json(await markPaid(current.id, null, { verified_by: req.user.id }, current.payment_method === 'onsite' ? 'onsite' : 'manual'));
+    return res.json(await markPaid(current.id, null, { verified_by: req.user.id }, current.payment_method === 'onsite' ? 'onsite' : 'manual', req.user));
   }
   if (current.payment_status === 'paid' && req.user.role !== 'admin') // a confirmed payment can only be undone by an admin
     return res.status(409).json({ message: 'This order is already paid. Only an admin can change a confirmed payment.' });
   await admin.from('orders').update({ payment_status, updated_at: new Date().toISOString() }).eq('id', req.params.id);
+  if (payment_status !== current.payment_status)
+    await logEvent(current.id, { event: 'payment', actor: req.user, note: payment_status === 'failed' ? 'Payment marked as failed (receipt rejected)' : 'Payment reset to unpaid' });
   res.json(await getOrder(req.params.id));
+});
+
+// POST /api/orders/:id/remind  (staff/admin) - email the pickup reminder right now
+router.post('/:id/remind', staffOnly, async (req, res) => {
+  const order = await getOrder(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (order.status !== 'ready_for_pickup') return res.status(400).json({ message: 'Reminders can only be sent for orders that are ready for pickup' });
+  const kind = order.pickup_date ? 'upcoming' : 'waiting';
+  const r = await sendReminder(order, kind, req.user);
+  res.json({ message: r.skipped ? 'Reminder was just sent' : 'Reminder emailed', ...r });
 });
 
 // POST /api/orders/:id/cancel  (owner while pending/unpaid)
@@ -184,6 +210,7 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
     return res.status(400).json({ message: 'Only pending, unpaid orders can be cancelled' });
   const { error } = await admin.rpc('cancel_order', { p_order: order.id });
   if (error) return res.status(400).json({ message: error.message });
+  await logEvent(order.id, { event: 'status', from: order.status, to: 'cancelled', actor: req.user, note: 'Cancelled by the student' });
   res.json(await getOrder(order.id));
 });
 

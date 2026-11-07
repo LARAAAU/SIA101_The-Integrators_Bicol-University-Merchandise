@@ -21,6 +21,18 @@ const PAY_STATUS = {
   paid: ['Paid', 'success'], failed: ['Failed', 'danger'],
 };
 const PAY_METHOD = { gcash_online: 'Online payment', gcash_manual: 'GCash (send receipt)', onsite: 'Pay onsite' };
+// Order history (status timeline). events come from GET /api/orders/:id, oldest first; newest is shown on top.
+function timelineHtml(events) {
+  if (!events || !events.length) return '<div class="muted small">No history recorded yet.</div>';
+  const label = (k) => (STATUS[k] ? STATUS[k][0] : k);
+  const title = (e) => (e.event === 'status' && e.from_status && e.from_status === e.to_status ? (e.note || label(e.to_status)) : e.event === 'status' ? (e.from_status ? label(e.from_status) + ' \u2192 ' : '') + label(e.to_status) : (e.note || e.event));
+  const dot = (e) => (e.event === 'status' || e.event === 'placed' ? (STATUS[e.to_status] || [0, 'secondary'])[1] : 'info');
+  return '<ol class="tl">' + events.slice().reverse().map((e, i) =>
+    '<li class="tl-item' + (i === 0 ? ' latest' : '') + '"><span class="tl-dot bg-' + dot(e) + '"></span>' +
+    '<div class="tl-title">' + esc(title(e)) + '</div>' +
+    (e.event === 'status' && e.note && e.from_status !== e.to_status ? '<div class="tl-note">' + esc(e.note) + '</div>' : '') +
+    '<div class="tl-meta">' + esc(e.actor_label || 'System') + ' \u00b7 ' + fmtDateTime(e.created_at) + '</div></li>').join('') + '</ol>';
+}
 const badge = (map, key) => { const [label, cls] = map[key] || [key, 'secondary']; return `<span class="badge bg-${cls}">${esc(label)}</span>`; };
 
 /* ---------- Manual GCash account (edited by admin in Payment settings) ---------- */
@@ -111,6 +123,39 @@ const Cart = {
 };
 function updateCartBadge() { const b = document.getElementById('cartBadge'); if (b) { const n = Cart.count(); b.textContent = n; b.hidden = n === 0; } }
 
+/* ---------- Announcement popup (text, picture and on/off are set by admin in Admin > Shop status) ---------- */
+// Shown when a student opens the site: once per visit (the X closes it for now), and never again on that
+// browser if the student presses "Don't show again" (until the admin changes the announcement).
+// Staff and admin do not get it (they can preview it from the admin page).
+function showAnnouncement(a, force) {
+  const text = String(a?.text || '').trim(), image = /^https?:\/\//.test(a?.image || '') ? a.image : '';
+  if ((!text && !image) || document.getElementById('annOverlay')) return;
+  let h = 0; for (const c of text + '|' + image) h = (h * 31 + c.charCodeAt(0)) | 0;
+  const stamp = String(h);
+  if (!force) {
+    try { if (localStorage.getItem('ms_ann_never') === stamp || sessionStorage.getItem('ms_ann_seen') === stamp) return; } catch {}
+  }
+  const el = document.createElement('div');
+  el.id = 'annOverlay'; el.className = 'ann-overlay';
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Announcement');
+  el.innerHTML = `<div class="ann-card">
+      <div class="ann-head"><span class="brand">BU <span>Merch</span></span><button type="button" class="ann-x" aria-label="Close">&times;</button></div>
+      <div class="ann-body">${image ? `<img class="ann-img" src="${esc(image)}" alt="Announcement">` : ''}${text ? `<p class="ann-text">${esc(text)}</p>` : ''}</div>
+      <div class="ann-foot"><button type="button" class="btn btn-ms ann-never">Don't show again</button></div>
+    </div>`;
+  const close = (never) => {
+    el.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', onKey);
+    if (force) return; // admin preview never changes what students see
+    try { sessionStorage.setItem('ms_ann_seen', stamp); if (never) localStorage.setItem('ms_ann_never', stamp); } catch {}
+  };
+  const onKey = (e) => { if (e.key === 'Escape') close(false); };
+  el.addEventListener('click', (e) => { if (e.target === el) close(false); });
+  el.querySelector('.ann-x').addEventListener('click', () => close(false));
+  el.querySelector('.ann-never').addEventListener('click', () => close(true));
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(el); document.body.style.overflow = 'hidden';
+}
+
 /* ---------- Shop open/closed and maintenance mode (set by admin in Admin > Shop status) ---------- */
 let SHOP = null;
 async function loadShop() {
@@ -170,6 +215,7 @@ async function applyShopStatus() {
   const s = SHOP = await loadShop(); if (!s) return;
   if (s.maintenance_mode && !staff) return showMaintenance(s);
   if (document.getElementById('maintScreen')) hideMaintenance();
+  if (!staff && s.announcement_enabled !== false) showAnnouncement({ text: s.announcement_text, image: s.announcement_image_url });
 
   const bars = [];
   if (s.maintenance_mode) bars.push('<div class="shop-bar maint"><b>Maintenance mode is on.</b> Students cannot use the shop right now. You can because you are staff.</div>');
@@ -286,6 +332,7 @@ const ICONS = {
   bag: '<path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   device: '<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 20h20"/>',
   logout: '<path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
+  bell: '<path d="M6 17V11a6 6 0 1 1 12 0v6l1.5 2h-15z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   home: '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>',
   chev: '<path d="M6 9l6 6 6-6"/>',

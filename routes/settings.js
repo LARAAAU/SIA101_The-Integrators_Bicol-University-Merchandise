@@ -1,7 +1,15 @@
 const router = require('express').Router();
+const multer = require('multer');
+const { detectImage, badImage } = require('../lib/imageCheck');
 const { admin } = require('../lib/supabase');
 const { requireAuth, adminOnly } = require('../middleware/auth');
-const { getShop, clearShopCache } = require('../lib/shopSettings');
+const { getShop, clearShopCache, pick } = require('../lib/shopSettings');
+
+const upload = multer({
+  storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => file.mimetype.startsWith('image/') ? cb(null, true) : cb(Object.assign(new Error('Only image files are allowed'), { status: 400 })),
+});
+const ANN_IMG_PREFIX = () => `${(process.env.SUPABASE_URL || '').replace(/\/$/, '')}/storage/v1/object/public/product-images/announcements/`;
 
 const EMPTY = { gcash_name: '', gcash_number: '', gcash_note: '' };
 
@@ -44,20 +52,37 @@ router.get('/shop', async (req, res) => {
   res.json(await getShop());
 });
 
+// POST /api/settings/announcement-image  (admin only, multipart: image) - stores the popup picture, returns its public URL
+router.post('/announcement-image', adminOnly, upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'Choose an image first' });
+  const kind = detectImage(req.file.buffer); // trust the file contents, not the name
+  if (!kind) return res.status(400).json({ message: badImage().message });
+  const name = `announcements/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${kind.ext}`;
+  const { error } = await admin.storage.from('product-images').upload(name, req.file.buffer, { contentType: kind.mime });
+  if (error) return res.status(500).json({ message: 'Image upload failed: ' + error.message });
+  res.json({ url: admin.storage.from('product-images').getPublicUrl(name).data.publicUrl });
+});
+
 // PUT /api/settings/shop  (admin only)
 router.put('/shop', adminOnly, async (req, res) => {
   const { is_open, maintenance_mode } = req.body;
   const closed = String(req.body.closed_message || '').trim();
   const maint = String(req.body.maintenance_message || '').trim();
+  const announcement_enabled = req.body.announcement_enabled !== false; // missing = keep it on
+  const announce = String(req.body.announcement_text || '').trim();
   if (typeof is_open !== 'boolean' || typeof maintenance_mode !== 'boolean') return res.status(400).json({ message: 'Invalid settings' });
   if (closed.length > 300 || maint.length > 300) return res.status(400).json({ message: 'Messages can be at most 300 characters' });
+  const announce_image_url = String(req.body.announcement_image_url || '').trim();
+  if (announce_image_url && !announce_image_url.startsWith(ANN_IMG_PREFIX())) return res.status(400).json({ message: 'Invalid announcement image' });
+  if (announce.length > 500) return res.status(400).json({ message: 'The announcement can be at most 500 characters' });
 
   const { data, error } = await admin.from('shop_settings')
-    .upsert({ id: 1, is_open, maintenance_mode, closed_message: closed || null, maintenance_message: maint || null, updated_at: new Date().toISOString(), updated_by: req.user.id })
-    .select('is_open,closed_message,maintenance_mode,maintenance_message').single();
-  if (error) return res.status(500).json({ message: 'Could not save. Did you run db/migration-07-shop-settings.sql in Supabase?' });
+    .upsert({ id: 1, is_open, maintenance_mode, closed_message: closed || null, maintenance_message: maint || null,
+      announcement_enabled, announcement_text: announce || null, announcement_image_url: announce_image_url || null, updated_at: new Date().toISOString(), updated_by: req.user.id })
+    .select('*').single();
+  if (error) return res.status(500).json({ message: 'Could not save. Did you run db/migration-07-shop-settings.sql and db/migration-10-announcement.sql in Supabase?' });
   clearShopCache();
-  res.json(data);
+  res.json({ ...(await getShop()), ...pick(data) });
 });
 
 module.exports = router;
