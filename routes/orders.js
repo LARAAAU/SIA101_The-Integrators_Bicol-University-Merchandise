@@ -97,6 +97,10 @@ router.get('/:id', requireAuth, async (req, res) => {
   if (order.student_id !== req.user.id && !isStaff(req.user)) return res.status(403).json({ message: 'Not your order' });
 
   if (order.payment_method === 'gcash_online' && order.payment_status !== 'paid') order = await syncPayment(order);
+  if (isStaff(req.user)) { // payment records (including paid-twice and refund-needed) are for staff only
+    const { data: pays } = await admin.from('payments').select('provider, provider_ref, amount, status, created_at').eq('order_id', order.id).order('created_at');
+    order.payments = pays || [];
+  }
   res.json(await withReceiptUrl(order));
 });
 
@@ -105,6 +109,9 @@ router.post('/:id/receipt', requireAuth, upload.single('receipt'), async (req, r
   const order = await getOrder(req.params.id);
   if (!order || order.student_id !== req.user.id) return res.status(404).json({ message: 'Order not found' });
   if (order.payment_method !== 'gcash_manual') return res.status(400).json({ message: 'This order does not use manual GCash payment' });
+  if (order.status === 'cancelled') return res.status(400).json({ message: 'This order was cancelled' });
+  if (!['unpaid', 'failed'].includes(order.payment_status)) // paid orders must never go back to "pending verification"
+    return res.status(400).json({ message: order.payment_status === 'paid' ? 'This order is already paid' : 'Your receipt is already waiting for verification' });
   if (!req.file || !req.body.reference_number?.trim()) return res.status(400).json({ message: 'Receipt image and reference number are required' });
 
   const kind = detectImage(req.file.buffer); // check the real file type, not just the label
@@ -155,10 +162,16 @@ router.patch('/:id/payment', staffOnly, async (req, res) => {
   const { payment_status } = req.body;
   if (!['paid', 'unpaid', 'failed'].includes(payment_status)) return res.status(400).json({ message: 'Invalid payment status' });
 
+  const current = await getOrder(req.params.id);
+  if (!current) return res.status(404).json({ message: 'Order not found' });
+  if (current.status === 'cancelled') return res.status(400).json({ message: 'This order was cancelled' });
+
   if (payment_status === 'paid') {
-    const order = await markPaid(req.params.id, null, { verified_by: req.user.id });
-    return res.json(order);
+    // Safe to press twice: a payment is only recorded once
+    return res.json(await markPaid(current.id, null, { verified_by: req.user.id }, current.payment_method === 'onsite' ? 'onsite' : 'manual'));
   }
+  if (current.payment_status === 'paid' && req.user.role !== 'admin') // a confirmed payment can only be undone by an admin
+    return res.status(409).json({ message: 'This order is already paid. Only an admin can change a confirmed payment.' });
   await admin.from('orders').update({ payment_status, updated_at: new Date().toISOString() }).eq('id', req.params.id);
   res.json(await getOrder(req.params.id));
 });

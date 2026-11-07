@@ -34,6 +34,8 @@ if (requireLogin()) {
     document.getElementById('view').innerHTML =
       '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h2 class="mb-0">Order #' + o.order_no + '</h2><div>' + badge(STATUS, o.status) + ' ' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
       (confirming ? '<div class="alert alert-info">Confirming your payment. This takes a few seconds...</div>' : '') +
+      (o.payment_method === 'gcash_online' && o.payment_status === 'failed' && o.status !== 'cancelled' ? '<div class="alert alert-danger"><b>Payment not completed.</b> You have not been charged. Your order is still reserved, so press <b>Pay now</b> to try again.</div>' : '') +
+      (o.payment_method === 'gcash_online' && o.payment_status === 'unpaid' && o.checkout_id && !confirming && o.status !== 'cancelled' ? '<div class="alert alert-warning">We have not received your payment yet. If you already paid, wait a minute and refresh this page. Otherwise press <b>Pay now</b>.</div>' : '') +
       (o.status === 'cancelled' ? '<div class="alert alert-secondary">This order was cancelled and the items were returned to stock.</div>' :
         '<div class="steps mb-4">' + STEPS.map((s, i) => '<div class="step ' + (i < idx ? 'done' : i === idx ? 'now' : '') + '">' + s[1] + '</div>').join('') + '</div>') +
       (o.pickup_date ? '<div class="alert alert-success">Pickup date: <b>' + fmtDate(o.pickup_date) + '</b></div>' : '') +
