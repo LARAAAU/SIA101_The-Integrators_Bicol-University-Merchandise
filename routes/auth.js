@@ -14,6 +14,7 @@ const profileLimit = rateLimit({ windowMs: 15 * MIN, max: 30, key: (req) => `me|
 const forgotPerEmail = rateLimit({ windowMs: 60 * MIN, max: 5, key: (req) => `forgot|${String(req.body?.email || '').trim().toLowerCase()}`, message: 'Too many reset requests. Please try again later.' });
 const forgotPerIp = rateLimit({ windowMs: 60 * MIN, max: 20, key: (req) => `forgot-ip|${req.ip}`, message: 'Too many reset requests. Please try again later.' });
 const deactivateLimit = rateLimit({ windowMs: 15 * MIN, max: 5, key: (req) => `deact|${req.user?.id || req.ip}`, message: 'Too many attempts. Please try again later.' });
+const deleteLimit = rateLimit({ windowMs: 15 * MIN, max: 5, key: (req) => `del|${req.user?.id || req.ip}`, message: 'Too many attempts. Please try again later.' });
 const resetLimit = rateLimit({ windowMs: 15 * MIN, max: 10, key: (req) => `reset|${req.ip}`, message: 'Too many attempts. Please try again later.' });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -223,6 +224,59 @@ router.post('/deactivate', requireAuth, deactivateLimit, async (req, res) => {
 
   try { await admin.auth.admin.signOut((req.headers.authorization || '').replace(/^Bearer\s+/i, ''), 'global'); } catch {}
   res.json({ message: 'Account deactivated.' });
+});
+
+// POST /api/auth/delete-account  { password, confirm: 'DELETE' }
+// Deletes the account but KEEPS every order as the shop's sales and stock history. No SQL changes needed.
+// How: the profile row stays (so orders keep pointing at it), but all personal data is wiped from it:
+//   - name stays only as "Juan Dela Cruz (deleted account, ID 2021-12345)" so history still shows who bought it
+//   - email, phone, address, course, year, block and campus are removed
+//   - the login is closed for good: email renamed, random password, banned
+// The student ID and email become free, so they can be used to sign up again.
+router.post('/delete-account', requireAuth, deleteLimit, async (req, res) => {
+  const password = String(req.body?.password || '');
+  if (!password) return res.status(400).json({ message: 'Enter your password to confirm' });
+  if (String(req.body?.confirm || '').trim().toUpperCase() !== 'DELETE') return res.status(400).json({ message: 'Type DELETE to confirm' });
+  if (req.user.role && req.user.role !== 'student') return res.status(400).json({ message: 'Staff and admin accounts cannot be deleted here. Ask an admin to change your role first.' });
+
+  const { error: pwErr } = await anon().auth.signInWithPassword({ email: req.user.university_email, password });
+  if (pwErr) return res.status(400).json({ message: 'Password is incorrect' });
+
+  const id = req.user.id;
+
+  // Orders still in progress hold stock and need a person to pick them up, so finish or cancel them first
+  const { data: open } = await admin.from('orders').select('id').eq('student_id', id).not('status', 'in', '(completed,cancelled)').limit(1);
+  if (open && open.length) return res.status(400).json({ message: 'You have an order in progress. Wait until it is completed, or cancel it first.' });
+
+  const profile = await getProfile(id);
+  const gone = `deleted-${id}@deleted.invalid`;
+  const label = `${profile?.full_name || 'Student'} (deleted account${profile?.student_id ? ', ID ' + profile.student_id : ''})`;
+
+  // 1. wipe personal data from the profile
+  const { error: pErr } = await admin.from('profiles').update({
+    full_name: label, first_name: 'Deleted', middle_name: null, last_name: 'account',
+    university_email: gone, phone: null, address: null,
+    student_id: null, course: null, year_level: null, block: null, campus_id: null,
+  }).eq('id', id);
+  if (pErr) {
+    console.error('[delete-account] profile wipe failed:', pErr.message);
+    return res.status(500).json({ message: 'Could not delete your account. Please contact the shop staff.' });
+  }
+
+  // 2. close the login for good (new email, random password, banned)
+  const { error: aErr } = await admin.auth.admin.updateUserById(id, {
+    email: gone, email_confirm: true,
+    password: require('crypto').randomBytes(32).toString('hex'),
+    ban_duration: '876000h',
+    user_metadata: { full_name: 'Deleted account' },
+  });
+  if (aErr) {
+    console.error('[delete-account] login close failed:', aErr.message);
+    try { await admin.auth.admin.updateUserById(id, { ban_duration: '876000h' }); } catch {}
+  }
+
+  try { await admin.auth.admin.signOut((req.headers.authorization || '').replace(/^Bearer\s+/i, ''), 'global'); } catch {}
+  res.json({ message: 'Account deleted.' });
 });
 
 module.exports = router;

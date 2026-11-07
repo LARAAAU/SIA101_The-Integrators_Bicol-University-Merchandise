@@ -69,6 +69,17 @@
           </div>
           <div class="ux-foot"><button class="btn btn-sm btn-outline-danger px-3" id="dBtn">Deactivate my account</button></div>
         </form>
+
+        <!-- DELETE -->
+        <form class="ux-card" id="fDelete" novalidate style="border-color:var(--bad)">
+          <div class="ux-head"><span class="ux-ico" style="color:var(--bad)"><i class="ico" data-i="logout"></i></span><div><h2>Delete account</h2><p>Permanently deletes your login and personal details (email, phone, address). Your past orders stay in the shop's records with only your name and student ID, so the shop's stock and sales history stay correct. This cannot be undone.</p></div></div>
+          <div class="ux-body">
+            <div class="ux-f"><label class="lbl" for="xPass">Your password</label><div class="ux-in"><i class="ico" data-i="lock"></i><input id="xPass" type="password" autocomplete="current-password"></div></div>
+            <div class="ux-f mb-0"><label class="lbl" for="xConfirm">Type DELETE to confirm</label><div class="ux-in"><i class="ico" data-i="hash"></i><input id="xConfirm" autocomplete="off" placeholder="DELETE"></div></div>
+          </div>
+          <div class="ux-foot"><button class="btn btn-sm btn-danger px-3" id="xBtn">Delete my account</button></div>
+        </form>
+
       </section>
     </div>
   </div>
@@ -138,6 +149,21 @@ fDeact.addEventListener('submit', async (e) => {
     setTimeout(() => Auth.logout(), 1500);
   } catch (err) { fail(err); dBtn.disabled = false; }
 });
+
+/* ----- delete account (orders are kept for the shop's records) ----- */
+fDelete.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!xPass.value) { toast('Enter your password to confirm', 'warning'); xPass.focus(); return; }
+  if (xConfirm.value.trim().toUpperCase() !== 'DELETE') { toast('Type DELETE to confirm', 'warning'); xConfirm.focus(); return; }
+  if (!confirm('Delete your account for good? This cannot be undone.')) return;
+  xBtn.disabled = true;
+  try {
+    await api('/auth/delete-account', { method: 'POST', body: { password: xPass.value, confirm: xConfirm.value } });
+    toast('Your account has been deleted.', 'success');
+    setTimeout(() => Auth.logout(), 1500);
+  } catch (err) { fail(err); xBtn.disabled = false; }
+});
+
 
 if (requireLogin()) (async () => {
   try {
