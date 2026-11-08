@@ -41,14 +41,15 @@ if (requireLogin()) {
       '<button class="btn btn-ms mt-3" id="slotSave" disabled>Confirm pickup schedule</button></div>';
   }
 
-  function drawSlots() {
+  function drawSlots(picked) { // picked = the slot the student just clicked, so a redraw keeps their choice
     const day = avail.find((d) => d.date === document.getElementById('pDate').value);
     document.getElementById('slotGrid').innerHTML = (day ? day.slots : []).map((s) => {
-      const off = s.status !== 'available';
+      const mine = booking && day && booking.date === day.date && booking.slot_id === s.id;
+      const off = s.status !== 'available' && !mine; // the student's own slot stays selectable even when it is full
       const tag = s.status === 'available' ? '<span class="badge bg-success">Available &middot; ' + s.left + ' left</span>'
         : s.status === 'full' ? '<span class="badge bg-danger">Fully booked</span>' : '<span class="badge bg-secondary">Time passed</span>';
-      const mine = booking && day && booking.date === day.date && booking.slot_id === s.id;
-      return '<div class="col-6"><label class="pay-opt h-100"' + (off ? ' style="opacity:.6;cursor:not-allowed"' : '') + '><input type="radio" name="slot" value="' + s.id + '" class="form-check-input me-2"' + (off ? ' disabled' : '') + (mine ? ' checked' : '') + '><b>' + esc(s.label) + '</b><div class="ms-4 mt-1">' + tag + '</div></label></div>';
+      const on = picked ? s.id === picked : mine;
+      return '<div class="col-6"><label class="pay-opt h-100"' + (off ? ' style="opacity:.6;cursor:not-allowed"' : '') + '><input type="radio" name="slot" value="' + s.id + '" class="form-check-input me-2"' + (off ? ' disabled' : '') + (on ? ' checked' : '') + '><b>' + esc(s.label) + '</b><div class="ms-4 mt-1">' + tag + '</div></label></div>';
     }).join('') || '<div class="col-12 muted small">No time slots on this date.</div>';
     document.getElementById('slotSave').disabled = !document.querySelector('input[name=slot]:checked') || (booking && day && booking.date === day.date && document.querySelector('input[name=slot]:checked')?.value === booking.slot_id);
   }
@@ -90,8 +91,8 @@ if (requireLogin()) {
 
     if (document.getElementById('pDate')) {
       drawSlots();
-      document.getElementById('pDate').addEventListener('change', drawSlots);
-      document.getElementById('slotGrid').addEventListener('change', drawSlots);
+      document.getElementById('pDate').addEventListener('change', () => drawSlots());
+      document.getElementById('slotGrid').addEventListener('change', (e) => drawSlots(e.target.value));
       document.getElementById('slotSave').addEventListener('click', async (e) => {
         const slot = document.querySelector('input[name=slot]:checked'); if (!slot) return;
         e.target.disabled = true;

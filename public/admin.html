@@ -101,7 +101,16 @@
             <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="maintOn"><label class="form-check-label fw-bold" for="maintOn">Maintenance mode</label></div>
             <div class="muted small mb-3">Students see a "We'll be right back" screen and cannot use the site. Use this while you update the system.</div>
             <label class="form-label" for="maintMsg">Maintenance message (optional)</label>
-            <textarea id="maintMsg" class="form-control" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
+            <textarea id="maintMsg" class="form-control mb-4" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
+
+            <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="annOn"><label class="form-check-label fw-bold" for="annOn">Show an announcement popup</label></div>
+            <div class="muted small mb-3">A popup students see once each time they open the site, for news such as a pre-order deadline or a pickup schedule. Staff and admin do not see it. Add text, a picture, or both. Leave both empty to show nothing. Students can close it, or press "Don't show again".</div>
+            <label class="form-label" for="annText">Announcement text</label>
+            <textarea id="annText" class="form-control" rows="3" maxlength="500" placeholder="e.g. Pre-orders close on December 1. Pickup starts December 10 at your campus."></textarea>
+            <label class="form-label mt-3" for="annImage">Picture (optional, max 5MB)</label>
+            <input id="annImage" type="file" accept="image/*" class="form-control">
+            <div id="annImgBox" class="mt-2 d-none"><img id="annImgPrev" alt="" style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line)"><div><button type="button" class="btn btn-sm btn-outline-danger mt-2" id="annImgRemove">Remove picture</button></div></div>
+            <div class="d-flex justify-content-between align-items-center muted small mt-1"><span id="annCount">0 / 500</span><button type="button" class="btn btn-sm btn-outline-ms" id="annTry">Preview popup</button></div>
           </div>
           <div class="ux-foot"><button class="btn btn-ms" id="shopSave">Save changes</button></div>
         </form>
@@ -583,7 +592,27 @@ $('payForm').addEventListener('submit', async (e) => {
 function fillShopForm(s) {
   $('shopOpen').checked = !!s.is_open; $('closedMsg').value = s.closed_message || '';
   $('maintOn').checked = !!s.maintenance_mode; $('maintMsg').value = s.maintenance_message || '';
+  $('annOn').checked = s.announcement_enabled !== false; $('annText').value = s.announcement_text || '';
+  setAnnImage(s.announcement_image_url || ''); previewAnnouncement();
 }
+let annImageUrl = '';
+function setAnnImage(url) {
+  annImageUrl = url; $('annImage').value = '';
+  $('annImgBox').classList.toggle('d-none', !url); $('annImgPrev').src = url || '';
+}
+$('annImage').addEventListener('change', async () => {
+  const file = $('annImage').files[0]; if (!file) return;
+  const f = new FormData(); f.append('image', file);
+  try { const r = await api('/settings/announcement-image', { method: 'POST', form: f }); setAnnImage(r.url); toast('Picture uploaded. Press Save changes to publish.', 'success'); }
+  catch (err) { $('annImage').value = ''; fail(err); }
+});
+$('annImgRemove').addEventListener('click', () => setAnnImage(''));
+function previewAnnouncement() { $('annCount').textContent = $('annText').value.length + ' / 500'; }
+$('annTry').addEventListener('click', () => {
+  if (!$('annText').value.trim() && !annImageUrl) return toast('Add text or a picture first', 'warning');
+  showAnnouncement({ text: $('annText').value, image: annImageUrl }, true);
+});
+['annOn', 'annText'].forEach((id) => $(id).addEventListener('input', previewAnnouncement));
 async function loadShopForm() {
   try { fillShopForm(await api('/settings/shop')); } catch (e) { fail(e); }
 }
@@ -592,7 +621,7 @@ $('shopForm').addEventListener('submit', async (e) => {
   if ($('maintOn').checked && !confirm('Turn on maintenance mode? Students will not be able to use the site until you turn it off.')) return;
   $('shopSave').disabled = true;
   try {
-    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value } });
+    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value, announcement_enabled: $('annOn').checked, announcement_text: $('annText').value, announcement_image_url: annImageUrl } });
     fillShopForm(s); applyShopStatus();
     toast('Shop status saved', 'success');
   } catch (err) { fail(err); } finally { $('shopSave').disabled = false; }

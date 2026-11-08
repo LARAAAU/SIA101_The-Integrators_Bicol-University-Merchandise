@@ -11,7 +11,9 @@
 8. Run `db/migration-07-shop-settings.sql` (adds the shop open/closed switch and maintenance mode; set them in Admin > Shop status).
 9. Run `db/migration-08-order-events.sql` (adds the order status timeline: who changed an order and when; shown on the order page and in the admin order window).
 9. Run `db/migration-09-pickup-reminders.sql` (adds scheduled pickup reminder emails; on Vercel also set `CRON_SECRET`, see `.env.example`).
-9. (Optional) Run `db/seed.sql` for sample products.
+10. Run `db/migration-10-announcement.sql` (adds the announcement popup).
+11. Run `db/migration-11-order-release.sql` (adds pickup release confirmation: staff check the student's school ID before an order is completed).
+12. (Optional) Run `db/seed.sql` for sample products.
 7. **Project Settings > API**: copy `Project URL`, `anon` key, and `service_role` key.
    The service_role key is a secret. Never put it in frontend code or commit it.
 

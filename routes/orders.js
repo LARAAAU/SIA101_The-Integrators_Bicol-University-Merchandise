@@ -138,6 +138,8 @@ router.patch('/:id/status', staffOnly, async (req, res) => {
   if (!STATUSES.includes(status)) return res.status(400).json({ message: 'Invalid status' });
 
   const current = await getOrder(req.params.id);
+  if (status === 'completed' && current && current.status !== 'completed' && req.user.role !== 'admin')
+    return res.status(403).json({ message: 'Use "Release order" to complete an order. It checks the student\'s school ID.' });
   if (!current) return res.status(404).json({ message: 'Order not found' });
   if (!canMove(current.status, status)) {
     const label = (s) => s.replace(/_/g, ' ');
@@ -163,7 +165,7 @@ router.patch('/:id/status', staffOnly, async (req, res) => {
   const prettyDate = dateChanged ? new Date(pickup_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
   const dateNote = dateChanged ? (current.pickup_date ? 'Pickup date changed to ' : 'Pickup date set to ') + prettyDate : null;
   if (status !== current.status) {
-    await logEvent(order.id, { event: 'status', from: current.status, to: status, actor: req.user, note: dateNote });
+    await logEvent(order.id, { event: 'status', from: current.status, to: status, actor: req.user, note: status === 'completed' ? 'Completed by an admin without the school ID check' : dateNote });
   } else if (dateChanged) {
     await logEvent(order.id, { event: 'status', from: current.status, to: current.status, actor: req.user, note: dateNote });
   }
@@ -200,6 +202,48 @@ router.post('/:id/remind', staffOnly, async (req, res) => {
   const kind = order.pickup_date ? 'upcoming' : 'waiting';
   const r = await sendReminder(order, kind, req.user);
   res.json({ message: r.skipped ? 'Reminder was just sent' : 'Reminder emailed', ...r });
+});
+
+// POST /api/orders/:id/release  { id_number, received_by, receiver_name?, cash_received? }  (staff/admin)
+// Hands an order over: the school ID number the student shows must match the account that placed the order.
+// This is the only way staff complete an order (an admin can still set Completed by hand as an override).
+const normId = (v) => String(v || '').replace(/[\s.\-_]/g, '').toUpperCase();
+router.post('/:id/release', staffOnly, async (req, res) => {
+  const { id_number, received_by, receiver_name, cash_received } = req.body;
+  const by = received_by === 'representative' ? 'representative' : 'student';
+  const order = await getOrder(req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  if (order.status === 'completed') return res.status(409).json({ message: 'This order was already released' });
+  if (order.status !== 'ready_for_pickup') return res.status(400).json({ message: 'Only an order that is ready for pickup can be released' });
+
+  const onFile = normId(order.profiles?.student_id);
+  if (!normId(id_number)) return res.status(400).json({ message: 'Enter the ID number shown on the school ID' });
+  if (!onFile) return res.status(400).json({ message: 'This student has no school ID number on their account, so it cannot be checked. Ask the student to add it in Account settings.' });
+  if (normId(id_number) !== onFile) return res.status(400).json({ message: 'The ID number does not match the student who placed this order. Do not release it.' });
+
+  const rep = String(receiver_name || '').trim();
+  if (by === 'representative' && !rep) return res.status(400).json({ message: 'Enter the name of the person collecting the order' });
+  if (rep.length > 80) return res.status(400).json({ message: 'The name is too long (maximum 80 characters)' });
+
+  // Payment must be settled before the goods leave. Onsite orders can be paid right now, in cash.
+  if (order.payment_status !== 'paid') {
+    if (order.payment_method === 'onsite' && cash_received === true) await markPaid(order.id, null, { verified_by: req.user.id }, 'onsite', req.user);
+    else return res.status(400).json({ message: order.payment_method === 'onsite' ? 'Tick "Cash received" once the student has paid' : 'This order is not paid yet. Confirm the payment first.' });
+  }
+
+  const who = by === 'representative' ? rep : (order.profiles?.full_name || 'the student');
+  // Only ONE request can win this update, so pressing the button twice never releases (or emails) twice
+  const { data: done, error } = await admin.from('orders').update({
+    status: 'completed', released_at: new Date().toISOString(), released_by: req.user.id, released_to: who, received_by: by, updated_at: new Date().toISOString(),
+  }).eq('id', order.id).eq('status', 'ready_for_pickup').select('id');
+  if (error) return res.status(500).json({ message: 'Could not release the order. Did you run db/migration-11-order-release.sql in Supabase?' });
+  if (!done?.length) return res.status(409).json({ message: 'This order was already released' });
+
+  await logEvent(order.id, { event: 'status', from: 'ready_for_pickup', to: 'completed', actor: req.user,
+    note: 'Released to ' + who + (by === 'representative' ? ' (representative)' : '') + '. Student ID checked.' });
+  const fresh = await getOrder(order.id);
+  await sendMail({ to: fresh.profiles?.university_email, ...templates.statusChanged(fresh) });
+  res.json(fresh);
 });
 
 // POST /api/orders/:id/cancel  (owner while pending/unpaid)

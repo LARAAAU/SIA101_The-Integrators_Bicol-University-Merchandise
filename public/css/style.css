@@ -461,6 +461,12 @@ textarea.form-control{min-height:0}
 @keyframes annFade{from{opacity:0}to{opacity:1}}
 @keyframes annPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 .ann-head .brand span{color:#f28c28}
+/* dark mode: the popup used the same colours as the page behind it, so it blended in. Give it its own surface, a lighter header, an outline and a darker backdrop. */
+[data-bs-theme="dark"] .ann-overlay{background:rgba(3,9,15,.8)}
+[data-bs-theme="dark"] .ann-card{background:var(--surface);border:1px solid var(--line-in);box-shadow:0 24px 60px rgba(0,0,0,.65)}
+[data-bs-theme="dark"] .ann-head{background:var(--sky);border-bottom:1px solid var(--line-in)}
+[data-bs-theme="dark"] .ann-img{border:1px solid var(--line)}
+[data-bs-theme="dark"] .ann-text{color:var(--ink)}
 
 /* ---------- dark mode: native dropdown lists (select boxes) ---------- */
 :root{color-scheme:light}
