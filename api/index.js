@@ -13,6 +13,7 @@ app.set('trust proxy', true);
 const allowedOrigins = [process.env.APP_URL, ...(process.env.CORS_ORIGINS || '').split(',')]
   .map((o) => (o || '').trim().replace(/\/$/, '')).filter(Boolean);
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+if (isProd) require('../lib/mailer').mailStatus().problems.forEach((p) => console.warn('[email setup]', p)); // shows up in the Vercel logs
 app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true); // same-origin requests, curl, payment webhooks

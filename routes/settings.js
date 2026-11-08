@@ -4,6 +4,8 @@ const { detectImage, badImage } = require('../lib/imageCheck');
 const { admin } = require('../lib/supabase');
 const { requireAuth, adminOnly } = require('../middleware/auth');
 const { getShop, clearShopCache, pick } = require('../lib/shopSettings');
+const { mailStatus, sendTestEmail } = require('../lib/mailer');
+const { rateLimit } = require('../middleware/rateLimit');
 
 const upload = multer({
   storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 },
@@ -83,6 +85,17 @@ router.put('/shop', adminOnly, async (req, res) => {
   if (error) return res.status(500).json({ message: 'Could not save. Did you run db/migration-07-shop-settings.sql and db/migration-10-announcement.sql in Supabase?' });
   clearShopCache();
   res.json({ ...(await getShop()), ...pick(data) });
+});
+
+// GET /api/settings/email  (admin only) - is email ready for real students? Never returns the API key.
+router.get('/email', adminOnly, (req, res) => res.json(mailStatus()));
+
+// POST /api/settings/email/test  (admin only) - sends one real email to the admin's own address
+const testLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, key: (req) => `mailtest|${req.user?.id || req.ip}`, message: 'Too many test emails. Try again in an hour.' });
+router.post('/email/test', adminOnly, testLimit, async (req, res) => {
+  const to = req.user.university_email || req.user.email;
+  if (!to) return res.status(400).json({ message: 'Your account has no email address to send the test to.' });
+  res.json(await sendTestEmail(to));
 });
 
 module.exports = router;
