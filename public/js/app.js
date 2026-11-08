@@ -74,7 +74,12 @@ function requireLogin(staff = false) {
 }
 
 /* ---------- API ---------- */
-async function api(path, { method = 'GET', body, form, auth = true } = {}) {
+// Every request is counted so the page loading screen knows when the first data has arrived
+async function api(...args) {
+  window.Loader && Loader.begin();
+  try { return await apiCall(...args); } finally { window.Loader && Loader.end(); }
+}
+async function apiCall(path, { method = 'GET', body, form, auth = true } = {}) {
   const opt = { method, headers: {} };
   const s = Auth.session();
   // Public calls (products, campuses) also carry the token when someone is logged in, so staff are recognised during maintenance.
@@ -159,7 +164,8 @@ function showAnnouncement(a, force) {
 /* ---------- Shop open/closed and maintenance mode (set by admin in Admin > Shop status) ---------- */
 let SHOP = null;
 async function loadShop() {
-  try { const r = await fetch(API + '/settings/shop', { cache: 'no-store' }); return r.ok ? await r.json() : null; } catch { return null; }
+  window.Loader && Loader.begin();
+  try { const r = await fetch(API + '/settings/shop', { cache: 'no-store' }); return r.ok ? await r.json() : null; } catch { return null; } finally { window.Loader && Loader.end(); }
 }
 const MAINT_KEY = 'ms_maint'; // remembers (for this tab) that maintenance was on, so a reload shows the screen with no flash
 let maintTimer = null;
@@ -233,6 +239,54 @@ document.addEventListener('click', (e) => {
   if (b && SHOP && !SHOP.is_open && !Auth.isStaff()) { e.preventDefault(); e.stopImmediatePropagation(); toast(SHOP.closed_message || 'The shop is closed for new orders right now.', 'warning'); }
 }, true);
 
+/* ---------- Loading cover for sections that refresh (admin tabs, popups) ---------- */
+const Skel = {
+  rows(n = 6) {
+    return '<div class="sk-card sk-rows"><div class="sk title" style="width:200px"></div>' +
+      Array.from({ length: n }, () => '<div class="sk-row"><div class="sk thumb" style="width:40px;height:40px"></div><div class="flex-grow-1"><div class="sk line" style="width:55%"></div><div class="sk line" style="width:30%;margin:0"></div></div><div class="sk btn-sk" style="width:80px;height:28px"></div></div>').join('') + '</div>';
+  },
+  modal() {
+    return '<div aria-hidden="true"><div class="sk line" style="width:140px"></div><div class="sk title" style="width:60%"></div><div class="sk block" style="height:90px;margin-bottom:1rem"></div><div class="sk block" style="height:120px;margin-bottom:1rem"></div><div class="sk input"></div></div>';
+  },
+  // Covers `el` with a skeleton while `promise` runs. It only appears if the wait is longer than 150 ms,
+  // and then stays at least 350 ms, so quick loads do not flicker.
+  async wrap(el, promise) {
+    if (!el || !promise || typeof promise.then !== 'function') return promise;
+    let cover = null, shownAt = 0;
+    const timer = setTimeout(() => {
+      el.classList.add('sk-busy');
+      cover = document.createElement('div'); cover.className = 'sk-cover'; cover.setAttribute('aria-hidden', 'true');
+      cover.innerHTML = Skel.rows(6);
+      el.appendChild(cover); shownAt = Date.now();
+    }, 150);
+    try { return await promise; } finally {
+      clearTimeout(timer);
+      if (cover) {
+        const rest = Math.max(0, 350 - (Date.now() - shownAt));
+        setTimeout(() => { cover.remove(); el.classList.remove('sk-busy'); }, rest);
+      }
+    }
+  },
+};
+
+/* ---------- Dropdowns: smooth open (CSS) and smooth close (here) ---------- */
+document.addEventListener('hide.bs.dropdown', (e) => {
+  const toggle = e.target;
+  const menu = toggle.parentElement && toggle.parentElement.querySelector(':scope > .dropdown-menu');
+  if (!menu || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  if (menu.dataset.ddState === 'done') return;          // the animation finished, let Bootstrap close it
+  e.preventDefault();                                   // wait for the closing animation first
+  if (menu.dataset.ddState === 'closing') return;
+  menu.dataset.ddState = 'closing';
+  menu.classList.add('dd-closing');
+  setTimeout(() => {
+    menu.dataset.ddState = 'done';
+    bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+    menu.classList.remove('dd-closing');
+    delete menu.dataset.ddState;
+  }, 140);
+});
+
 /* ---------- UI helpers ---------- */
 function toast(msg, type = 'dark') {
   let box = document.getElementById('toasts');
@@ -289,6 +343,7 @@ function renderNav(active) {
   document.getElementById('acctBtn')?.addEventListener('show.bs.dropdown', loadAcctOrders);
   updateCartBadge();
   applyShopStatus();
+  window.Loader && Loader.navReady(); // the loading screen now starts below the real navbar
 }
 
 // Fills the account menu with the order count and the 3 most recent orders

@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="/js/theme.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="/js/theme.js"></script><script src="/js/loader.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet"><title>MerchSys - Admin</title></head><body>
@@ -217,7 +217,8 @@ function show(name) {
   document.querySelectorAll('#tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name];
   ['dash', 'orders', 'products', 'campuses', 'schedule', 'payment', 'shop', 'audit', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
-  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, schedule: loadSchedule, payment: loadPayment, shop: loadShopForm, audit: loadAudit, users: loadUsers })[name]();
+  const run = ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, schedule: loadSchedule, payment: loadPayment, shop: loadShopForm, audit: loadAudit, users: loadUsers })[name]();
+  if (!(window.Loader && Loader.active())) Skel.wrap($('sec-' + name), run).catch(() => {}); // loading cover when switching tabs (the first load uses the page loading screen)
 }
 
 /* ---------------- Dashboard ---------------- */
@@ -358,6 +359,7 @@ const slotDateLabel = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-PH
 const orderModal = new bootstrap.Modal($('orderModal'));
 async function openOrder(id) {
   try {
+    $('omTitle').textContent = 'Order'; $('omBody').innerHTML = Skel.modal(); orderModal.show(); // show the popup right away with a loading skeleton
     if (!campusList.length) campusList = await api('/campuses/all');
     const o = await api('/orders/' + id);
     $('omTitle').textContent = 'Order #' + o.order_no;
@@ -368,6 +370,16 @@ async function openOrder(id) {
     if (canAssign) { try { avail = (await api('/pickup/availability')).filter((d) => d.slots.length); } catch {} }
     const canMarkPaid = o.payment_status !== 'paid' && o.status !== 'cancelled';
 
+    const releasedInfo = o.released_at ? '<div class="alert alert-success py-2 small mb-3">Released to <b>' + esc(o.released_to || 'the student') + '</b> on ' + fmtDateTime(o.released_at) + '. Student ID was checked.</div>' : '';
+    const releasePanel = o.status === 'ready_for_pickup' ?
+      '<div class="panel mb-3"><div class="fw-bold mb-1">Release order</div>' +
+      '<div class="muted small mb-2">Ask for the student\'s school ID, check the photo and name, then type the ID number below. The order is only released if it matches.</div>' +
+      '<div class="row g-2"><div class="col-md-6"><label class="form-label small" for="omRelId">ID number on the school ID</label><input id="omRelId" class="form-control" autocomplete="off" maxlength="30" placeholder="e.g. 2042-0-1293"></div>' +
+      '<div class="col-md-6"><label class="form-label small" for="omRelBy">Collected by</label><select id="omRelBy" class="form-select"><option value="student">The student</option><option value="representative">A representative</option></select></div>' +
+      '<div class="col-12 d-none" id="omRelNameRow"><label class="form-label small" for="omRelName">Full name of the person collecting</label><input id="omRelName" class="form-control" autocomplete="off" maxlength="80"></div></div>' +
+      (o.payment_status !== 'paid' && o.payment_method === 'onsite' ? '<div class="form-check mt-2"><input type="checkbox" class="form-check-input" id="omRelCash"><label class="form-check-label" for="omRelCash">Cash received: ' + peso(o.total) + '</label></div>' : '') +
+      (o.payment_status !== 'paid' && o.payment_method !== 'onsite' ? '<div class="alert alert-warning py-2 small mt-2 mb-0">This order is not paid yet. Confirm the payment first.</div>' : '') +
+      '<button class="btn btn-gold mt-3" id="omRelease">Release order</button></div>' : '';
     const pickupPanel = '<div class="panel mb-3"><div class="fw-bold mb-2">Pickup schedule</div>' +
       (bk ? '<div class="alert alert-info py-2 small mb-2">Pickup: <b>' + slotDateLabel(bk.date) + ' &middot; ' + esc(bk.label) + '</b></div>'
           : '<div class="muted small mb-2">No pickup schedule set yet. The student will see it on their order page once you set it.</div>') +
@@ -386,7 +398,7 @@ async function openOrder(id) {
       '<div class="col-md-6"><div class="muted small">Placed</div><div>' + fmtDateTime(o.created_at) + '</div></div></div><hr>' +
       '<table class="table table-sm"><tbody>' + o.order_items.map((i) => '<tr><td>' + esc(i.product_name) + '</td><td class="text-end">x' + i.quantity + '</td><td class="text-end">' + peso(i.unit_price * i.quantity) + '</td></tr>').join('') +
       '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + peso(o.total) + '</th></tr></tfoot></table>' +
-      pickupPanel +
+      releasedInfo + releasePanel + pickupPanel +
       '<div class="panel mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><div><div class="muted small">Payment</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div></div><div>' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
       (o.reference_number ? '<div class="mt-2 small">Reference number: <b>' + esc(o.reference_number) + '</b></div>' : '') +
       (o.receipt_url ? '<div class="mt-2"><a href="' + esc(o.receipt_url) + '" target="_blank" rel="noopener"><img src="' + esc(o.receipt_url) + '" alt="GCash receipt" style="max-height:220px;border-radius:8px;border:1px solid var(--line)"></a></div>' : '') +
@@ -396,7 +408,7 @@ async function openOrder(id) {
       campusList.map((c) => '<option value="' + c.id + '"' + (c.id === o.pickup_campus_id ? ' selected' : '') + '>' + esc(c.name) + (c.is_main ? ' (Main)' : '') + '</option>').join('') + '</select><div class="form-text">Change to the Main Campus if the student must pick up there.</div></div>' +
       '<div class="col-md-6"><label class="form-label" for="omNote">Pickup note for this order (optional)</label><textarea id="omNote" class="form-control" rows="2" placeholder="Overrides the campus note in the email">' + esc(o.pickup_note || '') + '</textarea></div></div>' +
       '<div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="omStatus">Order status</label><select id="omStatus" class="form-select">' +
-      Object.entries(STATUS).filter(([k]) => canMove(o.status, k)).map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select></div>' +
+      Object.entries(STATUS).filter(([k]) => canMove(o.status, k) && (k !== 'completed' || isAdmin)).map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select></div>' +
       '<div class="col-md-4"><label class="form-label" for="omPickup">Pickup date</label><input id="omPickup" type="date" class="form-control" value="' + (o.pickup_date || '') + '"' + (bk ? ' readonly title="Set from the pickup schedule above"' : '') + '></div>' +
       '<div class="col-md-3"><button class="btn btn-gold w-100" id="omSave">Save status</button></div></div>';
 
@@ -428,6 +440,17 @@ async function openOrder(id) {
       drawA();
     }
 
+    $('omRelBy')?.addEventListener('change', (e) => $('omRelNameRow').classList.toggle('d-none', e.target.value !== 'representative'));
+    $('omRelease')?.addEventListener('click', async (e) => {
+      const idNo = $('omRelId').value.trim();
+      if (!idNo) return toast('Type the ID number shown on the student\'s school ID', 'warning');
+      if ($('omRelBy').value === 'representative' && !$('omRelName').value.trim()) return toast('Enter the name of the person collecting', 'warning');
+      e.target.disabled = true;
+      try {
+        await api('/orders/' + id + '/release', { method: 'POST', body: { id_number: idNo, received_by: $('omRelBy').value, receiver_name: $('omRelName').value, cash_received: !!$('omRelCash')?.checked } });
+        toast('Order released and student notified', 'success'); orderModal.hide(); loadOrders();
+      } catch (err) { fail(err); e.target.disabled = false; }
+    });
     $('omPaid')?.addEventListener('click', () => payAction(id, 'paid'));
     $('omFail')?.addEventListener('click', () => payAction(id, 'failed'));
     $('omSave').addEventListener('click', async () => {
@@ -439,7 +462,7 @@ async function openOrder(id) {
       } catch (err) { fail(err); }
     });
     orderModal.show();
-  } catch (e) { fail(e); }
+  } catch (e) { orderModal.hide(); fail(e); }
 }
 async function payAction(id, payment_status) {
   try { await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } }); toast('Payment updated', 'success'); orderModal.hide(); loadOrders(); } catch (e) { fail(e); }

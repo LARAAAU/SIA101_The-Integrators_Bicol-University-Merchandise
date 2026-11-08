@@ -461,3 +461,77 @@ textarea.form-control{min-height:0}
 @keyframes annFade{from{opacity:0}to{opacity:1}}
 @keyframes annPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 .ann-head .brand span{color:#f28c28}
+
+/* ---------- dark mode: native dropdown lists (select boxes) ---------- */
+:root{color-scheme:light}
+[data-bs-theme="dark"]{color-scheme:dark}
+[data-bs-theme="dark"] select,
+[data-bs-theme="dark"] select option,
+[data-bs-theme="dark"] select optgroup{background-color:var(--surface);color:var(--ink)}
+[data-bs-theme="dark"] select option:checked,
+[data-bs-theme="dark"] select option:hover{background-color:var(--sky-2);color:var(--ink)}
+[data-bs-theme="dark"] input[type="date"],
+[data-bs-theme="dark"] input[type="time"]{color-scheme:dark}
+
+/* =====================================================================
+   Loading screen (skeleton). Same look on every page and dashboard.
+   ===================================================================== */
+:root{--sk-base:#e6edf3;--sk-hi:#f4f8fb}
+[data-bs-theme="dark"]{--sk-base:#1d2e3d;--sk-hi:#2a3f52}
+.sk{display:block;border-radius:10px;background:linear-gradient(90deg,var(--sk-base) 25%,var(--sk-hi) 45%,var(--sk-base) 65%);background-size:300% 100%;animation:skShimmer 1.5s ease-in-out infinite}
+@keyframes skShimmer{from{background-position:100% 0}to{background-position:0 0}}
+.sk.line{height:12px;margin-bottom:.6rem;border-radius:6px}
+.sk.title{height:26px;margin-bottom:1rem;border-radius:8px}
+.sk.hero-h{height:48px;margin-bottom:.7rem;border-radius:12px;width:95%}
+.sk.btn-sk{height:40px;border-radius:999px}
+.sk.input{height:46px;border-radius:12px;margin-bottom:.25rem}
+.sk.block{border-radius:14px}
+.sk.circle{width:56px;height:56px;border-radius:50%;margin:0 auto}
+.sk.circle-lg{width:min(100%,380px);aspect-ratio:1;border-radius:50%;margin-left:auto}
+.sk.thumb{width:64px;height:64px;border-radius:12px;flex:0 0 auto}
+.sk.img{aspect-ratio:1/.8;border-radius:0}
+.sk.logo{width:120px;height:28px;border-radius:8px}
+.sk-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:1.25rem}
+.sk-sep+.sk-sep{border-top:1px solid var(--line)}
+.sk-announce{height:34px;background:var(--deep)}
+.sk-fake-nav{background:var(--surface);border-bottom:1px solid var(--line);margin-bottom:1.5rem}
+
+.page-skel{position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;background:var(--paper);overflow:hidden;transition:opacity .25s ease}
+.page-skel.page-skel-out{opacity:0;pointer-events:none}
+.page-skel .sk-content{padding-bottom:3rem}
+.page-skel.has-nav .sk-content{padding-top:.5rem}
+.page-skel.is-auth{display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.sk-auth-wrap{width:100%;max-width:420px}
+.sk-auth-card{background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:2.25rem}
+.sk-bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:2100;overflow:hidden;background:transparent}
+.sk-bar::after{content:"";position:absolute;top:0;bottom:0;width:40%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--orange));animation:skBar 1.2s ease-in-out infinite}
+@keyframes skBar{from{left:-40%}to{left:100%}}
+
+/* loading cover for a section that is refreshing (admin tabs, order popup) */
+.sk-busy{position:relative;min-height:320px}
+.sk-cover{position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;background:var(--paper);border-radius:18px;overflow:hidden;animation:ddIn .18s ease both}
+.sk-cover .sk-card{height:100%}
+.sk-rows .sk-row{display:flex;gap:1rem;align-items:center;padding:.9rem 0}
+.sk-rows .sk-row+.sk-row{border-top:1px solid var(--line)}
+
+/* =====================================================================
+   Dropdown animation (account menu and any Bootstrap dropdown)
+   Uses the separate "translate" and "scale" properties so Bootstrap's own positioning is never disturbed.
+   ===================================================================== */
+@keyframes ddIn{from{opacity:0;translate:0 -8px;scale:.96}to{opacity:1;translate:0 0;scale:1}}
+@keyframes ddOut{from{opacity:1;translate:0 0;scale:1}to{opacity:0;translate:0 -8px;scale:.96}}
+.dropdown-menu{transform-origin:top right}
+.dropdown-menu.show{animation:ddIn .2s cubic-bezier(.2,.8,.2,1) both}
+.dropdown-menu.dd-closing{animation:ddOut .14s ease-in both;pointer-events:none}
+.acct-btn .chev{transition:transform .22s ease}
+.acct-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.acct-btn{transition:border-color .2s ease,background-color .2s ease,box-shadow .2s ease}
+@media(max-width:767px){.dropdown-menu{transform-origin:top center}}
+
+@media (prefers-reduced-motion:reduce){
+  .sk,.sk-bar::after{animation:none}
+  .dropdown-menu.show,.dropdown-menu.dd-closing,.sk-cover{animation:none}
+  .acct-btn .chev,.page-skel{transition:none}
+}
+/* dark mode: dark text on the green "success" badges for readable contrast */
+[data-bs-theme="dark"] .badge.bg-success{color:#052e22!important}
