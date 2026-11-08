@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "check:secrets": "node scripts/check-secrets.js"
   },
   "engines": { "node": ">=20" },
   "dependencies": {

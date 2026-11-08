@@ -1,6 +1,18 @@
+# dependencies and build output
 node_modules/
-.env
-.env.local
 .vercel/
+
+# secrets: never commit these (only .env.example is allowed)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+service-account*.json
+
+# logs and OS files
 *.log
+npm-debug.log*
 .DS_Store
+Thumbs.db

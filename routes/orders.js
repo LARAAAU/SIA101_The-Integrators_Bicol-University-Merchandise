@@ -8,6 +8,7 @@ const { getOrder, markPaid, syncPayment } = require('../lib/payments');
 const { detectImage } = require('../lib/imageCheck');
 const { logEvent, getEvents } = require('../lib/orderEvents');
 const { sendReminder } = require('../lib/pickupReminders');
+const { parsePage, envelope, cleanSearch } = require('../lib/paginate');
 const { requireShopOpen } = require('../middleware/shopStatus');
 
 const STATUSES = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed', 'cancelled'];
@@ -66,31 +67,41 @@ router.post('/', requireAuth, requireShopOpen, async (req, res) => {
   res.status(201).json(order);
 });
 
-// GET /api/orders/mine
+// GET /api/orders/mine  (?page=&limit= for pages; without them: the newest 200)
 router.get('/mine', requireAuth, async (req, res) => {
-  const { data, error } = await admin.from('orders').select('*, order_items(*)').eq('student_id', req.user.id).order('created_at', { ascending: false });
+  const pg = parsePage(req);
+  let query = admin.from('orders').select('*, order_items(*)', pg.paged ? { count: 'exact' } : undefined)
+    .eq('student_id', req.user.id).order('created_at', { ascending: false });
+  query = pg.paged ? query.range(pg.from, pg.to) : query.limit(200);
+  const { data, count, error } = await query;
   if (error) return res.status(500).json({ message: error.message });
-  res.json(data);
+  res.json(pg.paged ? envelope(data, count, pg) : data);
 });
 
-// GET /api/orders  (staff/admin)  ?status=&payment_status=&q=
+// GET /api/orders  (staff/admin)  ?status=&payment_status=&q=&page=&limit=
+// With ?page or ?limit the answer is { rows, page, limit, total, pages }. Without them: the newest 300 as an array.
 router.get('/', staffOnly, async (req, res) => {
-  let query = admin.from('orders').select(LIST_SELECT).order('created_at', { ascending: false }).limit(300);
+  const pg = parsePage(req);
+  let query = admin.from('orders').select(LIST_SELECT, pg.paged ? { count: 'exact' } : undefined).order('created_at', { ascending: false });
   if (req.query.status) query = query.eq('status', req.query.status);
   if (req.query.payment_status) query = query.eq('payment_status', req.query.payment_status);
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ message: error.message });
 
-  const q = (req.query.q || '').toLowerCase().trim();
-  res.json(
-    q
-      ? data.filter((o) =>
-          String(o.order_no).includes(q) ||
-          o.profiles?.full_name?.toLowerCase().includes(q) ||
-          o.profiles?.student_id?.toLowerCase().includes(q) ||
-          o.profiles?.university_email?.toLowerCase().includes(q))
-      : data
-  );
+  // Search is done in the database (so the page counts stay right): order number, or the student's name / ID / email
+  const q = cleanSearch(req.query.q);
+  if (q) {
+    const conds = [];
+    if (/^\d{1,9}$/.test(q)) conds.push(`order_no.eq.${q}`);
+    const { data: people } = await admin.from('profiles').select('id')
+      .or(`full_name.ilike.*${q}*,student_id.ilike.*${q}*,university_email.ilike.*${q}*`).limit(200);
+    if (people?.length) conds.push(`student_id.in.(${people.map((x) => x.id).join(',')})`);
+    if (!conds.length) return res.json(pg.paged ? envelope([], 0, pg) : []);
+    query = query.or(conds.join(','));
+  }
+
+  query = pg.paged ? query.range(pg.from, pg.to) : query.limit(300);
+  const { data, count, error } = await query;
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(pg.paged ? envelope(data, count, pg) : data);
 });
 
 // GET /api/orders/:id  (owner or staff). Also re-checks the payment provider if payment is still unpaid.

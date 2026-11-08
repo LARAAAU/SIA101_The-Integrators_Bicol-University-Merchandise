@@ -63,6 +63,7 @@ const Auth = {
   save(data) {
     store.set('ms_session', { access_token: data.access_token, refresh_token: data.refresh_token, expires_at: data.expires_at });
     store.set('ms_user', data.user);
+    try { sessionStorage.removeItem('ms_ann_seen'); localStorage.removeItem('ms_ann_never'); } catch {} // every new login shows the announcement again
   },
   logout() { store.del('ms_session'); store.del('ms_user'); location.href = '/login.html'; },
 };
@@ -126,39 +127,49 @@ const Cart = {
   },
   clear() { Cart.save([]); },
 };
-function updateCartBadge() { const b = document.getElementById('cartBadge'); if (b) { const n = Cart.count(); b.textContent = n; b.hidden = n === 0; } }
+function updateCartBadge() { const b = document.getElementById('cartBadge'); if (b) { const n = Cart.count(); b.textContent = n; b.hidden = n === 0; } const c = document.querySelector('.cart-btn'); if (c) { const n = Cart.count(); c.setAttribute('aria-label', n ? 'Cart, ' + n + ' item' + (n === 1 ? '' : 's') : 'Cart'); } }
 
 /* ---------- Announcement popup (text, picture and on/off are set by admin in Admin > Shop status) ---------- */
-// Shown when a student opens the site: once per visit (the X closes it for now), and never again on that
-// browser if the student presses "Don't show again" (until the admin changes the announcement).
+// Shown every time a student opens the site (new tab or browser) and after every new login. Closing it hides it
+// only for that visit, so moving between pages does not bring it back.
 // Staff and admin do not get it (they can preview it from the admin page).
 function showAnnouncement(a, force) {
   const text = String(a?.text || '').trim(), image = /^https?:\/\//.test(a?.image || '') ? a.image : '';
   if ((!text && !image) || document.getElementById('annOverlay')) return;
   let h = 0; for (const c of text + '|' + image) h = (h * 31 + c.charCodeAt(0)) | 0;
-  const stamp = String(h);
+  const stamp = (Auth.user()?.id || 'guest') + ':' + h; // per account, so a guest closing it does not hide it from a student who logs in later on the same browser
   if (!force) {
-    try { if (localStorage.getItem('ms_ann_never') === stamp || sessionStorage.getItem('ms_ann_seen') === stamp) return; } catch {}
+    try { if (sessionStorage.getItem('ms_ann_seen') === stamp) return; } catch {}
   }
+  const prevFocus = document.activeElement;
   const el = document.createElement('div');
   el.id = 'annOverlay'; el.className = 'ann-overlay';
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Announcement');
   el.innerHTML = `<div class="ann-card">
       <div class="ann-head"><span class="brand">BU <span>Merch</span></span><button type="button" class="ann-x" aria-label="Close">&times;</button></div>
-      <div class="ann-body">${image ? `<img class="ann-img" src="${esc(image)}" alt="Announcement">` : ''}${text ? `<p class="ann-text">${esc(text)}</p>` : ''}</div>
-      <div class="ann-foot"><button type="button" class="btn btn-ms ann-never">Don't show again</button></div>
+      <div class="ann-body">${image ? `<img class="ann-img" src="${esc(image)}" alt="Announcement picture">` : ''}${text ? `<p class="ann-text">${esc(text)}</p>` : ''}</div>
+      <div class="ann-foot"><button type="button" class="btn btn-ms ann-never">Got it</button></div>
     </div>`;
   const close = (never) => {
     el.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', onKey);
+    if (prevFocus && prevFocus.focus) prevFocus.focus();
     if (force) return; // admin preview never changes what students see
-    try { sessionStorage.setItem('ms_ann_seen', stamp); if (never) localStorage.setItem('ms_ann_never', stamp); } catch {}
+    try { sessionStorage.setItem('ms_ann_seen', stamp); } catch {}
   };
-  const onKey = (e) => { if (e.key === 'Escape') close(false); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') return close(false);
+    if (e.key !== 'Tab') return;
+    const f = [...el.querySelectorAll('button')]; if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
   el.addEventListener('click', (e) => { if (e.target === el) close(false); });
   el.querySelector('.ann-x').addEventListener('click', () => close(false));
   el.querySelector('.ann-never').addEventListener('click', () => close(true));
   document.addEventListener('keydown', onKey);
   document.body.appendChild(el); document.body.style.overflow = 'hidden';
+  el.querySelector('.ann-never').focus();
 }
 
 /* ---------- Shop open/closed and maintenance mode (set by admin in Admin > Shop status) ---------- */
@@ -293,7 +304,8 @@ function toast(msg, type = 'dark') {
   if (!box) { box = document.createElement('div'); box.id = 'toasts'; document.body.appendChild(box); }
   const el = document.createElement('div');
   el.className = `toast align-items-center text-bg-${type} border-0`;
-  el.setAttribute('role', 'status');
+  const urgent = type === 'danger' || type === 'warning';
+  el.setAttribute('role', urgent ? 'alert' : 'status'); el.setAttribute('aria-live', urgent ? 'assertive' : 'polite'); el.setAttribute('aria-atomic', 'true');
   el.innerHTML = `<div class="d-flex"><div class="toast-body">${esc(msg)}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
   box.appendChild(el);
   const t = new bootstrap.Toast(el, { delay: 3500 }); t.show();
@@ -310,7 +322,7 @@ function renderNav(active) {
     <li class="nav-item dropdown">
       <button class="acct-btn" id="acctBtn" data-bs-toggle="dropdown" aria-expanded="false">
         <span class="avatar">${initial}</span><span class="acct-name">${esc(first)}</span>
-        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        <svg class="chev" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="dropdown-menu dropdown-menu-end acct-menu">
         <div class="acct-head"><span class="avatar lg">${initial}</span>
@@ -325,11 +337,11 @@ function renderNav(active) {
 
   document.getElementById('nav').innerHTML = `
   <div class="announce">Pre-order now, pay with GCash, and pick up on your campus.</div>
-  <nav class="navbar navbar-expand-md navbar-ms mb-4"><div class="container">
+  <nav class="navbar navbar-expand-md navbar-ms mb-4" aria-label="Main"><div class="container">
     <a class="navbar-brand brand" href="/index.html">BU <span>Merch</span></a>
     <div class="d-flex align-items-center gap-2 ms-auto order-md-last">
       ${Theme.buttonHTML()}
-      <a class="cart-btn ${active === 'cart' ? 'on' : ''}" href="/cart.html" aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span id="cartBadge" class="cart-count" hidden>0</span></a>
+      <a class="cart-btn ${active === 'cart' ? 'on' : ''}" href="/cart.html" aria-label="Cart"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span id="cartBadge" class="cart-count" hidden>0</span></a>
       <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-label="Menu"><span class="navbar-toggler-icon"></span></button>
     </div>
     <div class="collapse navbar-collapse" id="navMenu">
@@ -338,6 +350,9 @@ function renderNav(active) {
       </ul>
       <ul class="navbar-nav align-items-md-center me-md-3">${account}</ul>
     </div></div></nav>`;
+
+  const mainEl = document.querySelector('main');
+  if (mainEl && !document.getElementById('skipLink')) { mainEl.id = mainEl.id || 'main'; mainEl.setAttribute('tabindex', '-1'); document.body.insertAdjacentHTML('afterbegin', '<a id="skipLink" class="skip-link" href="#' + mainEl.id + '">Skip to main content</a>'); }
 
   document.getElementById('logoutBtn')?.addEventListener('click', Auth.logout);
   document.getElementById('acctBtn')?.addEventListener('show.bs.dropdown', loadAcctOrders);

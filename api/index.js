@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('../lib/envCheck').reportEnv(); // friendly warnings about missing or weak secrets (never prints values)
 const express = require('express');
 const cors = require('cors');
 const { auditHook } = require('../lib/audit');

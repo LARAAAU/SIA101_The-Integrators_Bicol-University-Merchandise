@@ -69,7 +69,27 @@ Check `git status` first: `.env` must NOT be listed (it is in `.gitignore`).
 2. Add Environment Variables (same names as `.env.example`). Set `APP_URL` to your Vercel URL after the first deploy, then redeploy.
 3. Deploy. Test `https://YOUR-APP.vercel.app/api/health`.
 
-## Security reminder
+## Secrets and sharing (checklist for #91)
+Secrets are the keys and passwords in `.env`: the Supabase `service_role` key, `RESEND_API_KEY`, `MAYA_SECRET_KEY`, `PAYMONGO_SECRET_KEY` and `CRON_SECRET`. They live only in `.env` (local) and in Vercel Environment Variables (deployed).
+
+**Rules**
+- `.env` is in `.gitignore`. Never commit it, and never put it in a zip, chat, screenshot or document. Only `.env.example` (placeholders) is shared.
+- Share the project through GitHub (`git push`), not by zipping the folder. If you must zip, leave out `.env`, `node_modules` and `.git`.
+- The `service_role` key bypasses all database protection (RLS). It is used only on the server and never appears in the `public/` folder.
+
+**Before you push or share, run:** `npm run check:secrets`. It checks the files git tracks and the git history for keys and `.env` files, and prints file names only. It must say "All good".
+
+**When the server starts** it checks the environment (`lib/envCheck.js`). It stops with a clear message if a Supabase setting is missing, and warns about a missing or short `CRON_SECRET`, an empty `RESEND_API_KEY`, or an empty `APP_URL` in production. It never prints the values.
+
+**Rotate (replace) a secret when it was shared by mistake, and once before the final deployment**
+1. Supabase > Project Settings > API: create a new secret / `service_role` key (or reset the JWT secret: this also changes the `anon` key and logs everyone out, so update both in `.env`).
+2. Resend > API Keys: create a new key, then delete the old one.
+3. PayMongo / Maya dashboards: roll the secret key (test or sandbox keys are low risk; live keys are not).
+4. New `CRON_SECRET`: `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`.
+5. Put the new values in `.env` and in Vercel (Settings > Environment Variables), redeploy, then place a test order to check emails and login still work.
+
+Maya sandbox keys in `.env.example` are Maya's public demo keys (published in their docs), not private.
+
 The old MerchSys repo contained a `.env` with the MongoDB connection string. Change that database password or delete the old cluster.
 
 ## Not verified yet

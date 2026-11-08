@@ -51,6 +51,7 @@
             <div class="ux-in"><i class="ico" data-i="search"></i><input id="fQ" placeholder="Search order, name or ID" aria-label="Search orders"></div>
           </div></div>
           <div class="ux-tablewrap"><table class="ux-table stack"><thead><tr><th>Order</th><th>Student</th><th>Pickup</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead><tbody id="orderRows"></tbody></table></div>
+          <div class="ux-foot pager" id="ordPager"></div>
         </div>
       </section>
 
@@ -59,7 +60,9 @@
         <div class="ux-card">
           <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="tag"></i></span><div class="grow"><h2>Products</h2><p>What students can pre-order in the shop</p></div>
             <button class="btn btn-ms btn-sm px-3" id="addProduct">Add product</button></div>
+          <div class="ux-body pb-0"><div class="ux-in"><i class="ico" data-i="search"></i><input id="pQ" placeholder="Search products" aria-label="Search products"></div></div>
           <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th></th><th>Name</th><th>Price</th><th>Stock</th><th>Pre-order closes</th><th></th></tr></thead><tbody id="prodRows"></tbody></table></div>
+          <div class="ux-foot pager" id="prodPager"></div>
         </div>
       </section>
 
@@ -69,6 +72,7 @@
           <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="pin"></i></span><div class="grow"><h2>Pickup locations</h2><p>Colleges and campuses students can choose at checkout. The note is shown on their order page and in emails.</p></div>
             <button class="btn btn-ms btn-sm px-3" id="addCampus">Add location</button></div>
           <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th>Name</th><th>Address</th><th>Pickup note</th><th></th></tr></thead><tbody id="campRows"></tbody></table></div>
+          <div class="ux-foot pager" id="campPager"></div>
         </div>
       </section>
 
@@ -104,7 +108,7 @@
             <textarea id="maintMsg" class="form-control mb-4" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
 
             <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="annOn"><label class="form-check-label fw-bold" for="annOn">Show an announcement popup</label></div>
-            <div class="muted small mb-3">A popup students see once each time they open the site, for news such as a pre-order deadline or a pickup schedule. Staff and admin do not see it. Add text, a picture, or both. Leave both empty to show nothing. Students can close it, or press "Don't show again".</div>
+            <div class="muted small mb-3">A popup students see each time they log in or open the site, for news such as a pre-order deadline or a pickup schedule. Staff and admin do not see it. Add text, a picture, or both. Leave both empty to show nothing. Students can close it for that visit.</div>
             <label class="form-label" for="annText">Announcement text</label>
             <textarea id="annText" class="form-control" rows="3" maxlength="500" placeholder="e.g. Pre-orders close on December 1. Pickup starts December 10 at your campus."></textarea>
             <label class="form-label mt-3" for="annImage">Picture (optional, max 5MB)</label>
@@ -149,8 +153,8 @@
           <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="shield"></i></span><div class="grow"><h2>Audit log</h2><p>Who changed what, and when. Newest first.</p></div>
             <button class="btn btn-outline-ms btn-sm px-3" id="auRefresh">Refresh</button></div>
           <div class="ux-body pb-3"><div class="ux-in"><i class="ico" data-i="search"></i><input id="auQ" placeholder="Search by person, action or item" aria-label="Search audit log"></div></div>
-          <div class="ux-tablewrap"><table class="ux-table"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Details</th></tr></thead><tbody id="auRows"></tbody></table></div>
-          <div class="ux-foot"><button class="btn btn-outline-ms btn-sm px-3" id="auMore" hidden>Load more</button></div>
+          <div class="ux-tablewrap"><table class="ux-table au"><caption class="visually-hidden">Audit log, newest first</caption><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Details</th></tr></thead><tbody id="auRows"></tbody></table></div>
+          <div class="ux-foot pager" id="auPager"></div>
         </div>
       </section>
 
@@ -158,7 +162,10 @@
       <section id="sec-users" class="d-none">
         <div class="ux-card">
           <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="users"></i></span><div class="grow"><h2>Users</h2><p>Make someone staff or admin. Staff can manage orders and products.</p></div></div>
+          <div class="ux-body pb-0"><div class="ux-grid3"><div class="ux-in"><i class="ico" data-i="search"></i><input id="uQ" placeholder="Search name, email or student ID" aria-label="Search users"></div>
+            <div class="ux-in"><select id="uRole" aria-label="Filter by role"><option value="">All roles</option><option value="student">Students</option><option value="staff">Staff</option><option value="admin">Admins</option></select><i class="ico chev" data-i="chev"></i></div></div></div>
           <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th>Name</th><th>Student ID</th><th>Course, year and block</th><th>Campus</th><th>Mobile</th><th>Role</th></tr></thead><tbody id="userRows"></tbody></table></div>
+          <div class="ux-foot pager" id="userPager"></div>
         </div>
       </section>
     </div>
@@ -224,8 +231,8 @@ function init() {
 
 function show(name) {
   const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', schedule: 'Pickup schedule', payment: 'Payment settings', shop: 'Shop status', audit: 'Audit log', users: 'Users' };
-  document.querySelectorAll('#tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
-  $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name];
+  document.querySelectorAll('#tabs [data-tab]').forEach((b) => { b.classList.toggle('on', b.dataset.tab === name); if (b.dataset.tab === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name]; document.title = TITLES[name] + ' - Admin | BU Merch';
   ['dash', 'orders', 'products', 'campuses', 'schedule', 'payment', 'shop', 'audit', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
   const run = ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, schedule: loadSchedule, payment: loadPayment, shop: loadShopForm, audit: loadAudit, users: loadUsers })[name]();
   if (!(window.Loader && Loader.active())) Skel.wrap($('sec-' + name), run).catch(() => {}); // loading cover when switching tabs (the first load uses the page loading screen)
@@ -309,16 +316,33 @@ async function loadDash() {
   } catch (e) { fail(e); }
 }
 
+/* ---------------- Pager (shared by Orders, Products, Pickup locations, Audit log and Users) ---------------- */
+const PAGE_SIZE = 10; // every list with pages shows 10 rows per page
+// Draws "Showing 21-40 of 134 | Previous  Page 2 of 7  Next" and calls go(page) when a button is pressed
+function renderPager(el, d, go) {
+  if (!d || d.total <= d.limit) { el.innerHTML = d && d.total ? '<span class="muted small me-auto">' + d.total + ' in total</span>' : ''; return; }
+  const from = (d.page - 1) * d.limit + 1, to = Math.min(d.page * d.limit, d.total);
+  el.innerHTML = '<span class="muted small me-auto">Showing ' + from + '-' + to + ' of ' + d.total + '</span>' +
+    '<button class="btn btn-outline-ms btn-sm px-3" data-go="' + (d.page - 1) + '"' + (d.page <= 1 ? ' disabled' : '') + '>Previous</button>' +
+    '<span class="small nw">Page ' + d.page + ' of ' + d.pages + '</span>' +
+    '<button class="btn btn-outline-ms btn-sm px-3" data-go="' + (d.page + 1) + '"' + (d.page >= d.pages ? ' disabled' : '') + '>Next</button>';
+  el.onclick = (e) => { const b = e.target.closest('button[data-go]'); if (b && !b.disabled) go(parseInt(b.dataset.go, 10)); };
+}
+
 /* ---------------- Orders ---------------- */
-let ordersCache = [], campusList = [];
-async function loadOrders() {
+let ordersCache = [], campusList = [], ordPage = 1;
+async function loadOrders(page) {
+  if (typeof page === 'number') ordPage = page;
   try {
-    const q = new URLSearchParams();
+    const q = new URLSearchParams({ page: ordPage, limit: PAGE_SIZE });
     if ($('fStatus').value) q.set('status', $('fStatus').value);
     if ($('fPay').value) q.set('payment_status', $('fPay').value);
     if ($('fQ').value.trim()) q.set('q', $('fQ').value.trim());
-    ordersCache = await api('/orders?' + q.toString());
-    $('ordCount').textContent = ordersCache.length + ' order' + (ordersCache.length === 1 ? '' : 's') + ' · click one to see its details';
+    const d = await api('/orders?' + q.toString());
+    if (!d.rows.length && d.page > 1) return loadOrders(d.pages); // the last page became empty (orders moved or removed)
+    ordersCache = d.rows;
+    $('ordCount').textContent = d.total + ' order' + (d.total === 1 ? '' : 's') + ' · click one to see its details';
+    renderPager($('ordPager'), d, loadOrders);
     $('orderRows').innerHTML = ordersCache.length ? ordersCache.map((o) =>
       '<tr class="clickable" data-id="' + o.id + '"><td class="nw"><div class="fw-bold">#' + o.order_no + '</div><div class="muted small">' + fmtDate(o.created_at) + '</div></td>' +
       '<td><div class="fw-medium">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.student_id || o.profiles?.university_email || '') + '</div></td>' +
@@ -334,27 +358,42 @@ const csvCell = (v) => {
   if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // stop Excel from running text as a formula
   return '"' + t.replace(/"/g, '""') + '"';
 };
-function exportOrdersCsv() {
-  if (!ordersCache || !ordersCache.length) return toast('No orders to export', 'warning');
+async function exportOrdersCsv() {
+  // Exports every order that matches the filters, not just the page on screen (fetched 100 at a time)
+  const btn = $('fExport'); btn.disabled = true;
+  let rows = [];
+  try {
+    for (let page = 1; page <= 100; page++) {
+      const q = new URLSearchParams({ page, limit: 100 });
+      if ($('fStatus').value) q.set('status', $('fStatus').value);
+      if ($('fPay').value) q.set('payment_status', $('fPay').value);
+      if ($('fQ').value.trim()) q.set('q', $('fQ').value.trim());
+      const d = await api('/orders?' + q.toString());
+      rows = rows.concat(d.rows);
+      if (page >= d.pages) break;
+    }
+  } catch (e) { btn.disabled = false; return fail(e); }
+  btn.disabled = false;
+  if (!rows.length) return toast('No orders to export', 'warning');
   const head = ['Order no', 'Date placed', 'Student', 'Student ID', 'Email', 'Course', 'Pickup campus', 'Items', 'Total (PHP)', 'Order status', 'Payment method', 'Payment status', 'Reference number', 'Pickup date'];
-  const rows = ordersCache.map((o) => [
+  const data = rows.map((o) => [
     o.order_no, fmtDateTime(o.created_at), o.profiles?.full_name, o.profiles?.student_id, o.profiles?.university_email, o.profiles?.course,
     o.campus?.name, (o.order_items || []).map((i) => i.product_name + ' x' + i.quantity).join('; '), Number(o.total || 0).toFixed(2),
     (STATUS[o.status] || [o.status])[0], PAY_METHOD[o.payment_method] || o.payment_method, (PAY_STATUS[o.payment_status] || [o.payment_status])[0],
     o.reference_number, o.pickup_date,
   ]);
-  const csv = '\ufeff' + [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n'); // BOM so Excel reads UTF-8
+  const csv = '\ufeff' + [head, ...data].map((r) => r.map(csvCell).join(',')).join('\r\n'); // BOM so Excel reads UTF-8
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = 'bu-merch-orders-' + new Date().toISOString().slice(0, 10) + '.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  toast('Exported ' + ordersCache.length + ' orders', 'success');
+  toast('Exported ' + rows.length + ' orders', 'success');
 }
 $('fExport').addEventListener('click', exportOrdersCsv);
-$('fRefresh').addEventListener('click', loadOrders);
-$('fStatus').addEventListener('change', loadOrders);
-$('fPay').addEventListener('change', loadOrders);
-let qTimer; $('fQ').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(loadOrders, 350); });
+$('fRefresh').addEventListener('click', () => loadOrders());
+$('fStatus').addEventListener('change', () => loadOrders(1));
+$('fPay').addEventListener('change', () => loadOrders(1));
+let qTimer; $('fQ').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(() => loadOrders(1), 350); });
 $('orderRows').addEventListener('click', (e) => { const r = e.target.closest('tr[data-id]'); if (r) openOrder(r.dataset.id); });
 
 // Same flow rules as the server (routes/orders.js): move forward or cancel; completed and cancelled are final
@@ -475,23 +514,39 @@ async function openOrder(id) {
   } catch (e) { orderModal.hide(); fail(e); }
 }
 async function payAction(id, payment_status) {
-  try { await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } }); toast('Payment updated', 'success'); orderModal.hide(); loadOrders(); } catch (e) { fail(e); }
+  // keep the order popup open after a payment change so the admin can set the status right away; only the payment part refreshes
+  const keep = { st: $('omStatus')?.value, pd: $('omPickup')?.value, nt: $('omNote')?.value, cp: $('omCampus')?.value, top: $('omBody').scrollTop };
+  try {
+    await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } });
+    toast('Payment updated', 'success'); loadOrders();
+    await openOrder(id); // reload the popup so the payment shows as paid
+    const setIf = (el, v) => { if (el && v !== undefined && v !== null && (el.tagName !== 'SELECT' || [...el.options].some((o) => o.value === v))) el.value = v; };
+    setIf($('omStatus'), keep.st); setIf($('omCampus'), keep.cp); setIf($('omNote'), keep.nt);
+    if ($('omPickup') && !$('omPickup').readOnly) setIf($('omPickup'), keep.pd);
+    $('omBody').scrollTop = keep.top;
+  } catch (e) { fail(e); }
 }
 
 /* ---------------- Products ---------------- */
-let products = [];
-async function loadProducts() {
+let products = [], prodPage = 1;
+async function loadProducts(page) {
+  if (typeof page === 'number') prodPage = page;
   try {
-    products = await api('/products/all');
+    const q = new URLSearchParams({ page: prodPage, limit: PAGE_SIZE });
+    if ($('pQ').value.trim()) q.set('q', $('pQ').value.trim());
+    const d = await api('/products/all?' + q.toString());
+    if (!d.rows.length && d.page > 1) return loadProducts(d.pages);
+    products = d.rows; renderPager($('prodPager'), d, loadProducts);
     $('prodRows').innerHTML = products.length ? products.map((p) =>
       '<tr class="' + (p.is_active ? '' : 'muted') + '"><td>' + (p.image_url ? '<img class="thumb" src="' + esc(p.image_url) + '" alt="">' : '<div class="thumb d-flex align-items-center justify-content-center fw-bold">' + esc(p.name.charAt(0)) + '</div>') + '</td>' +
       '<td class="fw-bold">' + esc(p.name) + '<div class="muted small fw-normal">' + esc(p.category) + '</div>' + (p.is_active ? '' : ' <span class="badge bg-secondary">Hidden</span>') + '</td><td>' + peso(p.price) + '</td>' +
       '<td>' + p.stock + (p.stock <= p.low_stock_threshold ? ' <span class="badge bg-warning text-dark">Low</span>' : '') + '</td><td>' + fmtDate(p.preorder_deadline) + '</td>' +
-      '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + p.id + '">Edit</button> ' +
-      (p.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + p.id + '">Hide</button>' : '') + '</td></tr>').join('')
-      : '<tr><td colspan="6" class="text-center muted py-4">No products yet. Click "Add product" to create one.</td></tr>';
+      '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + p.id + '" aria-label="Edit ' + esc(p.name) + '">Edit</button> ' +
+      (p.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + p.id + '" aria-label="Hide ' + esc(p.name) + '">Hide</button>' : '') + '</td></tr>').join('')
+      : '<tr><td colspan="6" class="text-center muted py-4">' + ($('pQ').value.trim() ? 'No products match your search.' : 'No products yet. Click "Add product" to create one.') + '</td></tr>';
   } catch (e) { fail(e); }
 }
+let pqTimer; $('pQ').addEventListener('input', () => { clearTimeout(pqTimer); pqTimer = setTimeout(() => loadProducts(1), 350); });
 const prodModal = new bootstrap.Modal($('prodModal'));
 let editingId = null;
 function openProduct(p) {
@@ -530,14 +585,20 @@ $('prodForm').addEventListener('submit', async (e) => {
 /* ---------------- Campuses ---------------- */
 const campModal = new bootstrap.Modal($('campModal'));
 let editingCampus = null;
-async function loadCampuses() {
+let campPage = 1;
+async function loadCampuses(page) {
+  if (typeof page === 'number') campPage = page;
   try {
-    campusList = await api('/campuses/all');
-    $('campRows').innerHTML = campusList.length ? campusList.map((c) =>
+    campusList = await api('/campuses/all'); // the full list is also used by the order popup, so pages are cut here
+    const pages = Math.max(Math.ceil(campusList.length / PAGE_SIZE), 1);
+    if (campPage > pages) campPage = pages;
+    const shown = campusList.slice((campPage - 1) * PAGE_SIZE, campPage * PAGE_SIZE);
+    renderPager($('campPager'), { page: campPage, limit: PAGE_SIZE, total: campusList.length, pages }, loadCampuses);
+    $('campRows').innerHTML = campusList.length ? shown.map((c) =>
       '<tr class="' + (c.is_active ? '' : 'muted') + '"><td class="fw-bold">' + esc(c.name) + (c.is_main ? ' <span class="badge bg-primary">Main</span>' : '') + (c.is_active ? '' : ' <span class="badge bg-secondary">Hidden</span>') + '</td>' +
       '<td>' + esc(c.address || '-') + '</td><td class="small" style="max-width:340px">' + esc(c.pickup_note || '-') + '</td>' +
-      '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + c.id + '">Edit</button> ' +
-      (c.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + c.id + '">Hide</button>' : '') + '</td></tr>').join('')
+      '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + c.id + '" aria-label="Edit ' + esc(c.name) + '">Edit</button> ' +
+      (c.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + c.id + '" aria-label="Hide ' + esc(c.name) + '">Hide</button>' : '') + '</td></tr>').join('')
       : '<tr><td colspan="4" class="text-center muted py-4">No campuses yet. Click "Add campus".</td></tr>';
   } catch (e) { fail(e); }
 }
@@ -633,10 +694,10 @@ $('shopForm').addEventListener('submit', async (e) => {
 /* ---------------- Pickup schedule ---------------- */
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const slotRow = (s) => '<div class="row g-2 align-items-end mb-2 s-row">' +
-  '<div class="col-4 col-md-3"><label class="form-label small">Start</label><input type="time" class="form-control s-start" value="' + esc(s.start) + '"></div>' +
-  '<div class="col-4 col-md-3"><label class="form-label small">End</label><input type="time" class="form-control s-end" value="' + esc(s.end) + '"></div>' +
-  '<div class="col-4 col-md-3"><label class="form-label small">Limit</label><input type="number" min="1" max="500" class="form-control s-cap" value="' + esc(s.capacity) + '"></div>' +
-  '<div class="col-12 col-md-3"><button type="button" class="btn btn-sm btn-outline-danger s-del">Remove</button></div></div>';
+  '<div class="col-4 col-md-3"><label class="form-label small">Start</label><input type="time" aria-label="Start time" class="form-control s-start" value="' + esc(s.start) + '"></div>' +
+  '<div class="col-4 col-md-3"><label class="form-label small">End</label><input type="time" aria-label="End time" class="form-control s-end" value="' + esc(s.end) + '"></div>' +
+  '<div class="col-4 col-md-3"><label class="form-label small">Limit</label><input type="number" aria-label="Slot limit" min="1" max="500" class="form-control s-cap" value="' + esc(s.capacity) + '"></div>' +
+  '<div class="col-12 col-md-3"><button type="button" class="btn btn-sm btn-outline-danger s-del" aria-label="Remove time slot">Remove</button></div></div>';
 const todayPH = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 async function loadSchedule() {
   try {
@@ -676,40 +737,57 @@ async function loadDay() {
 $('sDate').addEventListener('change', loadDay);
 
 /* ---------------- Audit log (admin only) ---------------- */
-let auNext = null;
-const auDetails = (d) => d ? (Object.entries(d).map(([k, v]) => esc(k.replace(/_/g, ' ')) + ': ' + esc(typeof v === 'object' ? JSON.stringify(v) : v)).join(' · ') || '-') : '-';
-async function loadAudit(more = false) {
+let auPage = 1;
+const auDetails = (d) => {
+  const e = d ? Object.entries(d) : [];
+  if (!e.length) return '<span class="au-none">-</span>';
+  const items = e.map(([k, v]) => '<div class="au-kv"><span class="au-k">' + esc(k.replace(/_/g, ' ')) + '</span><span class="au-v">' + esc(typeof v === 'object' ? JSON.stringify(v) : v) + '</span></div>').join('');
+  return '<details class="au-d"><summary>View details (' + e.length + ')</summary><div class="au-list">' + items + '</div></details>';
+};
+const auMQ = window.matchMedia('(min-width:701px)');
+const auSync = () => document.querySelectorAll('#auRows .au-d').forEach((d) => { d.open = auMQ.matches; });
+auMQ.addEventListener('change', auSync);
+async function loadAudit(page) {
+  if (typeof page === 'number') auPage = page;
   try {
-    const q = new URLSearchParams();
+    const q = new URLSearchParams({ page: auPage, limit: PAGE_SIZE });
     if ($('auQ').value.trim()) q.set('q', $('auQ').value.trim());
-    if (more === true && auNext) q.set('offset', auNext);
     const out = await api('/audit?' + q.toString());
+    if (!out.rows.length && out.page > 1) return loadAudit(out.pages);
     const html = out.rows.map((r) =>
-      '<tr><td class="nw">' + fmtDateTime(r.created_at) + '</td>' +
-      '<td><div class="fw-medium">' + esc(r.actor_name || '-') + '</div><div class="muted small">' + esc(r.actor_role || '') + '</div></td>' +
-      '<td class="fw-bold">' + esc(r.action) + '</td><td>' + esc(r.target_label || '-') + '</td>' +
-      '<td class="small muted" style="max-width:340px;overflow-wrap:anywhere">' + auDetails(r.details) + '</td></tr>').join('');
-    if (more === true) $('auRows').insertAdjacentHTML('beforeend', html);
-    else $('auRows').innerHTML = html || '<tr><td colspan="5" class="text-center muted py-4">Nothing logged yet.</td></tr>';
-    auNext = out.next;
-    $('auMore').hidden = out.next == null;
+      '<tr><td class="nw au-when">' + fmtDateTime(r.created_at) + '</td>' +
+      '<td class="au-who"><div class="fw-medium">' + esc(r.actor_name || '-') + '</div><div class="muted small">' + esc(r.actor_role || '') + '</div></td>' +
+      '<td class="fw-bold au-act">' + esc(r.action) + '</td>' +
+      '<td class="au-item' + (r.target_label ? '' : ' au-empty') + '">' + (r.target_label ? '<span class="au-chip">' + esc(r.target_label) + '</span>' : '-') + '</td>' +
+      '<td class="small muted au-det">' + auDetails(r.details) + '</td></tr>').join('');
+    $('auRows').innerHTML = html || '<tr><td colspan="5" class="text-center muted py-4">' + ($('auQ').value.trim() ? 'Nothing matches your search.' : 'Nothing logged yet.') + '</td></tr>';
+    auSync();
+    renderPager($('auPager'), out, loadAudit);
   } catch (e) { fail(e); }
 }
 $('auRefresh').addEventListener('click', () => loadAudit());
-$('auMore').addEventListener('click', () => loadAudit(true));
-let auTimer; $('auQ').addEventListener('input', () => { clearTimeout(auTimer); auTimer = setTimeout(() => loadAudit(), 350); });
+let auTimer; $('auQ').addEventListener('input', () => { clearTimeout(auTimer); auTimer = setTimeout(() => loadAudit(1), 350); });
 
 /* ---------------- Users (admin only) ---------------- */
-async function loadUsers() {
+let userPage = 1;
+async function loadUsers(page) {
+  if (typeof page === 'number') userPage = page;
   try {
-    const users = await api('/users');
+    const q = new URLSearchParams({ page: userPage, limit: PAGE_SIZE });
+    if ($('uQ').value.trim()) q.set('q', $('uQ').value.trim());
+    if ($('uRole').value) q.set('role', $('uRole').value);
+    const d = await api('/users?' + q.toString());
+    if (!d.rows.length && d.page > 1) return loadUsers(d.pages);
+    const users = d.rows; renderPager($('userPager'), d, loadUsers);
     const me = Auth.user().id;
     $('userRows').innerHTML = users.map((u) =>
       '<tr><td class="fw-bold">' + esc(u.full_name) + '<div class="muted small fw-normal">' + esc(u.university_email) + '</div></td><td>' + esc(u.student_id || '-') + '</td><td>' + esc([u.course, u.year_level, u.block && 'Block ' + u.block].filter(Boolean).join(' / ') || '-') + '</td><td>' + esc(u.campus?.name || '-') + '</td><td>' + esc(u.phone || '-') + '</td>' +
-      '<td><select class="form-select form-select-sm" style="width:130px" data-id="' + u.id + '"' + (u.id === me ? ' disabled' : '') + '>' +
+      '<td><select class="form-select form-select-sm" style="width:130px" aria-label="Role of ' + esc(u.full_name) + '" data-id="' + u.id + '"' + (u.id === me ? ' disabled' : '') + '>' +
       ['student', 'staff', 'admin'].map((r) => '<option' + (r === u.role ? ' selected' : '') + '>' + r + '</option>').join('') + '</select></td></tr>').join('');
   } catch (e) { fail(e); }
 }
+let uqTimer; $('uQ').addEventListener('input', () => { clearTimeout(uqTimer); uqTimer = setTimeout(() => loadUsers(1), 350); });
+$('uRole').addEventListener('change', () => loadUsers(1));
 $('userRows').addEventListener('change', async (e) => {
   const sel = e.target.closest('select[data-id]'); if (!sel) return;
   try { await api('/users/' + sel.dataset.id + '/role', { method: 'PATCH', body: { role: sel.value } }); toast('Role updated', 'success'); } catch (err) { fail(err); loadUsers(); }

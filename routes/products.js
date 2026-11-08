@@ -4,6 +4,7 @@ const path = require('path');
 const { admin } = require('../lib/supabase');
 const { staffOnly } = require('../middleware/auth');
 const { detectImage, badImage } = require('../lib/imageCheck');
+const { parsePage, envelope, cleanSearch, LEGACY_CAP } = require('../lib/paginate');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -38,19 +39,28 @@ const CATEGORIES = ['Clothes', 'Bags', 'Caps', 'Pins', 'Others'];
 const invalid = (p) =>
   (p.category !== undefined && !CATEGORIES.includes(p.category)) || (p.name !== undefined && !p.name) || (p.price !== undefined && !(p.price >= 0)) || (p.stock !== undefined && !(p.stock >= 0));
 
-// GET /api/products  (public; CDN-cached for speed)
+// GET /api/products  (public; CDN-cached for speed). Optional ?page=&limit= (max 100); without them the shop gets up to 500 products.
 router.get('/', async (req, res) => {
-  const { data, error } = await admin.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false });
+  const pg = parsePage(req);
+  let query = admin.from('products').select('*', pg.paged ? { count: 'exact' } : undefined).eq('is_active', true).order('created_at', { ascending: false });
+  query = pg.paged ? query.range(pg.from, pg.to) : query.limit(500);
+  const { data, count, error } = await query;
   if (error) return res.status(500).json({ message: error.message });
   res.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
-  res.json(data);
+  res.json(pg.paged ? envelope(data, count, pg) : data);
 });
 
-// GET /api/products/all  (staff/admin, includes inactive)
+// GET /api/products/all  (staff/admin, includes inactive)  ?q=&category=&page=&limit=
 router.get('/all', staffOnly, async (req, res) => {
-  const { data, error } = await admin.from('products').select('*').order('created_at', { ascending: false });
+  const pg = parsePage(req);
+  let query = admin.from('products').select('*', pg.paged ? { count: 'exact' } : undefined).order('created_at', { ascending: false });
+  if (CATEGORIES.includes(req.query.category)) query = query.eq('category', req.query.category);
+  const q = cleanSearch(req.query.q);
+  if (q) query = query.ilike('name', `%${q}%`);
+  query = pg.paged ? query.range(pg.from, pg.to) : query.limit(LEGACY_CAP);
+  const { data, count, error } = await query;
   if (error) return res.status(500).json({ message: error.message });
-  res.json(data);
+  res.json(pg.paged ? envelope(data, count, pg) : data);
 });
 
 // POST /api/products  (multipart: image + fields)
