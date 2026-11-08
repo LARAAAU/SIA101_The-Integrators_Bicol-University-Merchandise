@@ -13,6 +13,7 @@
       <button class="ux-nav" data-tab="orders"><i class="ico" data-i="bag"></i>Orders</button>
       <button class="ux-nav" data-tab="products"><i class="ico" data-i="tag"></i>Products</button>
       <button class="ux-nav" data-tab="campuses"><i class="ico" data-i="pin"></i>Pickup locations</button>
+      <button class="ux-nav" data-tab="schedule"><i class="ico" data-i="cap"></i>Pickup schedule</button>
       <button class="ux-nav" data-tab="payment" id="tabPayment"><i class="ico" data-i="wallet"></i>Payment settings</button>
       <button class="ux-nav" data-tab="shop" id="tabShop"><i class="ico" data-i="home"></i>Shop status</button>
       <button class="ux-nav" data-tab="audit" id="tabAudit"><i class="ico" data-i="shield"></i>Audit log</button>
@@ -100,19 +101,36 @@
             <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="maintOn"><label class="form-check-label fw-bold" for="maintOn">Maintenance mode</label></div>
             <div class="muted small mb-3">Students see a "We'll be right back" screen and cannot use the site. Use this while you update the system.</div>
             <label class="form-label" for="maintMsg">Maintenance message (optional)</label>
-            <textarea id="maintMsg" class="form-control mb-4" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
-
-            <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="annOn"><label class="form-check-label fw-bold" for="annOn">Show an announcement popup</label></div>
-            <div class="muted small mb-3">A popup students see once each time they open the site, for news such as a pre-order deadline or a pickup schedule. Staff and admin do not see it. Add text, a picture, or both. Leave both empty to show nothing. Students can close it, or press "Don't show again".</div>
-            <label class="form-label" for="annText">Announcement text</label>
-            <textarea id="annText" class="form-control" rows="3" maxlength="500" placeholder="e.g. Pre-orders close on December 1. Pickup starts December 10 at your campus."></textarea>
-            <label class="form-label mt-3" for="annImage">Picture (optional, max 5MB)</label>
-            <input id="annImage" type="file" accept="image/*" class="form-control">
-            <div id="annImgBox" class="mt-2 d-none"><img id="annImgPrev" alt="" style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line)"><div><button type="button" class="btn btn-sm btn-outline-danger mt-2" id="annImgRemove">Remove picture</button></div></div>
-            <div class="d-flex justify-content-between align-items-center muted small mt-1"><span id="annCount">0 / 500</span><button type="button" class="btn btn-sm btn-outline-ms" id="annTry">Preview popup</button></div>
+            <textarea id="maintMsg" class="form-control" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
           </div>
           <div class="ux-foot"><button class="btn btn-ms" id="shopSave">Save changes</button></div>
         </form>
+      </section>
+
+      <!-- PICKUP SCHEDULE -->
+      <section id="sec-schedule" class="d-none">
+        <form class="ux-card" id="schedForm">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="cap"></i></span><div class="grow"><h2>Pickup schedule</h2><p>Set the days and time slots you can assign to orders for pickup. Each slot has a limit, and a full slot cannot be assigned. To give an order its pickup date and time, open the order in the Orders tab.</p></div></div>
+          <div class="ux-body">
+            <div class="mb-3"><div class="form-label">Days open for pickup</div><div class="d-flex flex-wrap gap-3" id="sDays"></div></div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4"><label class="form-label" for="sAdvance">Pickup can be scheduled up to (days ahead)</label><input id="sAdvance" type="number" min="1" max="60" class="form-control"></div>
+              <div class="col-md-8"><label class="form-label" for="sClosed">Closed dates (one per line, like 2026-12-25)</label><textarea id="sClosed" class="form-control" rows="2" placeholder="2026-12-25"></textarea></div>
+            </div>
+            <div class="form-label">Time slots</div>
+            <div id="sSlots"></div>
+            <button type="button" class="btn btn-outline-ms btn-sm mt-1" id="sAddSlot">Add time slot</button>
+            <div class="muted small mt-3" id="sNote"></div>
+          </div>
+          <div class="ux-foot"><button class="btn btn-ms" id="sSave">Save schedule</button></div>
+        </form>
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="users"></i></span><div class="grow"><h2>Who is coming</h2><p>The pickups scheduled for a day.</p></div></div>
+          <div class="ux-body">
+            <div class="mb-3" style="max-width:220px"><label class="form-label" for="sDate">Date</label><input id="sDate" type="date" class="form-control"></div>
+            <div id="sDay"></div>
+          </div>
+        </div>
       </section>
 
       <!-- AUDIT LOG (admin only) -->
@@ -195,11 +213,11 @@ function init() {
 }
 
 function show(name) {
-  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', payment: 'Payment settings', shop: 'Shop status', audit: 'Audit log', users: 'Users' };
+  const TITLES = { dash: 'Dashboard', orders: 'Orders', products: 'Products', campuses: 'Pickup locations', schedule: 'Pickup schedule', payment: 'Payment settings', shop: 'Shop status', audit: 'Audit log', users: 'Users' };
   document.querySelectorAll('#tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name];
-  ['dash', 'orders', 'products', 'campuses', 'payment', 'shop', 'audit', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
-  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, payment: loadPayment, shop: loadShopForm, audit: loadAudit, users: loadUsers })[name]();
+  ['dash', 'orders', 'products', 'campuses', 'schedule', 'payment', 'shop', 'audit', 'users'].forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
+  ({ dash: loadDash, orders: loadOrders, products: loadProducts, campuses: loadCampuses, schedule: loadSchedule, payment: loadPayment, shop: loadShopForm, audit: loadAudit, users: loadUsers })[name]();
 }
 
 /* ---------------- Dashboard ---------------- */
@@ -333,31 +351,82 @@ const FLOW = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed']
 const canMove = (from, to) => from === to || (to === 'cancelled' && from !== 'completed' && from !== 'cancelled') ||
   (FLOW.includes(from) && FLOW.includes(to) && FLOW.indexOf(to) > FLOW.indexOf(from));
 
+// Orders that can still be given a pickup date and time (same list as routes/pickup.js)
+const SCHEDULABLE = ['pending', 'approved', 'shipped', 'ready_for_pickup'];
+const slotDateLabel = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
 const orderModal = new bootstrap.Modal($('orderModal'));
-async function openOrder(id, keep) {
+async function openOrder(id) {
   try {
     if (!campusList.length) campusList = await api('/campuses/all');
     const o = await api('/orders/' + id);
     $('omTitle').textContent = 'Order #' + o.order_no;
+    const isAdmin = Auth.user().role === 'admin';
+    const canAssign = isAdmin && SCHEDULABLE.includes(o.status);
+    let bk = null; try { bk = await api('/pickup/order/' + id); } catch {}
+    let avail = [];
+    if (canAssign) { try { avail = (await api('/pickup/availability')).filter((d) => d.slots.length); } catch {} }
     const canMarkPaid = o.payment_status !== 'paid' && o.status !== 'cancelled';
+
+    const pickupPanel = '<div class="panel mb-3"><div class="fw-bold mb-2">Pickup schedule</div>' +
+      (bk ? '<div class="alert alert-info py-2 small mb-2">Pickup: <b>' + slotDateLabel(bk.date) + ' &middot; ' + esc(bk.label) + '</b></div>'
+          : '<div class="muted small mb-2">No pickup schedule set yet. The student will see it on their order page once you set it.</div>') +
+      (canAssign
+        ? (avail.length
+            ? '<label class="form-label small" for="omADate">Pickup date</label><select id="omADate" class="form-select mb-2">' +
+              avail.map((d) => '<option value="' + d.date + '"' + (bk && bk.date === d.date ? ' selected' : '') + '>' + slotDateLabel(d.date) + '</option>').join('') + '</select>' +
+              '<div class="row g-2" id="omASlots"></div>' +
+              '<button type="button" class="btn btn-sm btn-ms mt-2" id="omASave" disabled>Save pickup schedule</button>'
+            : '<div class="muted small">No open pickup days. Check the Pickup schedule tab.</div>')
+        : (isAdmin ? '' : '<div class="muted small">Only admins can set the pickup schedule.</div>')) +
+      '</div>';
+
     $('omBody').innerHTML =
       '<div class="row g-3"><div class="col-md-6"><div class="muted small">Student</div><div class="fw-bold">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.university_email) + '</div><div class="muted small">' + esc([o.profiles?.student_id && 'ID ' + o.profiles.student_id, o.profiles?.course, o.profiles?.year_level, o.profiles?.block && 'Block ' + o.profiles.block, o.profiles?.phone].filter(Boolean).join(' | ')) + '</div></div>' +
       '<div class="col-md-6"><div class="muted small">Placed</div><div>' + fmtDateTime(o.created_at) + '</div></div></div><hr>' +
       '<table class="table table-sm"><tbody>' + o.order_items.map((i) => '<tr><td>' + esc(i.product_name) + '</td><td class="text-end">x' + i.quantity + '</td><td class="text-end">' + peso(i.unit_price * i.quantity) + '</td></tr>').join('') +
       '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + peso(o.total) + '</th></tr></tfoot></table>' +
+      pickupPanel +
       '<div class="panel mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><div><div class="muted small">Payment</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div></div><div>' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
       (o.reference_number ? '<div class="mt-2 small">Reference number: <b>' + esc(o.reference_number) + '</b></div>' : '') +
       (o.receipt_url ? '<div class="mt-2"><a href="' + esc(o.receipt_url) + '" target="_blank" rel="noopener"><img src="' + esc(o.receipt_url) + '" alt="GCash receipt" style="max-height:220px;border-radius:8px;border:1px solid var(--line)"></a></div>' : '') +
       (canMarkPaid ? '<div class="mt-3 d-flex gap-2"><button class="btn btn-sm btn-ms" id="omPaid">' + (o.payment_method === 'onsite' ? 'Confirm cash received' : 'Mark as paid') + '</button>' +
         (o.payment_status === 'pending_verification' ? '<button class="btn btn-sm btn-outline-danger" id="omFail">Reject receipt</button>' : '') + '</div>' : '') + '</div>' +
-      '<div class="panel mb-3"><h6 class="mb-3">Order history</h6>' + timelineHtml(o.events) + '</div>' +
       '<div class="row g-2 mb-2"><div class="col-md-6"><label class="form-label" for="omCampus">Pickup location</label><select id="omCampus" class="form-select">' +
       campusList.map((c) => '<option value="' + c.id + '"' + (c.id === o.pickup_campus_id ? ' selected' : '') + '>' + esc(c.name) + (c.is_main ? ' (Main)' : '') + '</option>').join('') + '</select><div class="form-text">Change to the Main Campus if the student must pick up there.</div></div>' +
       '<div class="col-md-6"><label class="form-label" for="omNote">Pickup note for this order (optional)</label><textarea id="omNote" class="form-control" rows="2" placeholder="Overrides the campus note in the email">' + esc(o.pickup_note || '') + '</textarea></div></div>' +
       '<div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="omStatus">Order status</label><select id="omStatus" class="form-select">' +
       Object.entries(STATUS).filter(([k]) => canMove(o.status, k)).map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select></div>' +
-      '<div class="col-md-4"><label class="form-label" for="omPickup">Pickup date</label><input id="omPickup" type="date" class="form-control" value="' + (o.pickup_date || '') + '"></div>' +
+      '<div class="col-md-4"><label class="form-label" for="omPickup">Pickup date</label><input id="omPickup" type="date" class="form-control" value="' + (o.pickup_date || '') + '"' + (bk ? ' readonly title="Set from the pickup schedule above"' : '') + '></div>' +
       '<div class="col-md-3"><button class="btn btn-gold w-100" id="omSave">Save status</button></div></div>';
+
+    // Pickup schedule picker (admin only): date, then a time slot with places left
+    if ($('omADate')) {
+      const drawA = () => {
+        const day = avail.find((d) => d.date === $('omADate').value);
+        $('omASlots').innerHTML = (day ? day.slots : []).map((s) => {
+          const off = s.status !== 'available';
+          const tag = s.status === 'available' ? '<span class="badge bg-success">' + s.left + ' left</span>'
+            : s.status === 'full' ? '<span class="badge bg-danger">Fully booked</span>' : '<span class="badge bg-secondary">Time passed</span>';
+          const mine = bk && day && bk.date === day.date && bk.slot_id === s.id;
+          return '<div class="col-6"><label class="pay-opt h-100"' + (off ? ' style="opacity:.6;cursor:not-allowed"' : '') + '><input type="radio" name="omASlot" value="' + s.id + '" class="form-check-input me-2"' + (off ? ' disabled' : '') + (mine ? ' checked' : '') + '><b>' + esc(s.label) + '</b><div class="ms-4 mt-1">' + tag + '</div></label></div>';
+        }).join('') || '<div class="col-12 muted small">No time slots on this date.</div>';
+        const picked = document.querySelector('input[name=omASlot]:checked');
+        $('omASave').disabled = !picked || !!(bk && day && bk.date === day.date && picked.value === bk.slot_id);
+      };
+      $('omADate').addEventListener('change', drawA);
+      $('omASlots').addEventListener('change', () => { $('omASave').disabled = !document.querySelector('input[name=omASlot]:checked'); });
+      $('omASave').addEventListener('click', async (e) => {
+        const picked = document.querySelector('input[name=omASlot]:checked'); if (!picked) return;
+        e.target.disabled = true;
+        try {
+          await api('/pickup/assign', { method: 'POST', body: { order_id: id, date: $('omADate').value, slot_id: picked.value } });
+          toast('Pickup schedule set', 'success');
+          await openOrder(id); loadOrders(); // reload so the pickup date and places left are up to date
+        } catch (err) { fail(err); e.target.disabled = false; }
+      });
+      drawA();
+    }
 
     $('omPaid')?.addEventListener('click', () => payAction(id, 'paid'));
     $('omFail')?.addEventListener('click', () => payAction(id, 'failed'));
@@ -369,21 +438,11 @@ async function openOrder(id, keep) {
         toast('Status updated and student notified', 'success'); orderModal.hide(); loadOrders();
       } catch (err) { fail(err); }
     });
-    if (keep) { // came back after a payment change: put back whatever the admin had already picked or typed
-      ['omCampus', 'omNote', 'omPickup'].forEach((k) => { if (keep[k] !== undefined) $(k).value = keep[k]; });
-      if ([...$('omStatus').options].some((op) => op.value === keep.omStatus)) $('omStatus').value = keep.omStatus;
-    }
     orderModal.show();
   } catch (e) { fail(e); }
 }
-// Payment changes keep the order window open (a toast confirms it), so the admin can set the status right after
 async function payAction(id, payment_status) {
-  try {
-    const keep = {}; ['omStatus', 'omCampus', 'omNote', 'omPickup'].forEach((k) => { if ($(k)) keep[k] = $(k).value; });
-    await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } });
-    toast(payment_status === 'paid' ? 'Payment confirmed. You can now update the order status.' : 'Payment updated', 'success');
-    await openOrder(id, keep); loadOrders();
-  } catch (e) { fail(e); }
+  try { await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } }); toast('Payment updated', 'success'); orderModal.hide(); loadOrders(); } catch (e) { fail(e); }
 }
 
 /* ---------------- Products ---------------- */
@@ -501,27 +560,7 @@ $('payForm').addEventListener('submit', async (e) => {
 function fillShopForm(s) {
   $('shopOpen').checked = !!s.is_open; $('closedMsg').value = s.closed_message || '';
   $('maintOn').checked = !!s.maintenance_mode; $('maintMsg').value = s.maintenance_message || '';
-  $('annOn').checked = s.announcement_enabled !== false; $('annText').value = s.announcement_text || '';
-  setAnnImage(s.announcement_image_url || ''); previewAnnouncement();
 }
-let annImageUrl = '';
-function setAnnImage(url) {
-  annImageUrl = url; $('annImage').value = '';
-  $('annImgBox').classList.toggle('d-none', !url); $('annImgPrev').src = url || '';
-}
-$('annImage').addEventListener('change', async () => {
-  const file = $('annImage').files[0]; if (!file) return;
-  const f = new FormData(); f.append('image', file);
-  try { const r = await api('/settings/announcement-image', { method: 'POST', form: f }); setAnnImage(r.url); toast('Picture uploaded. Press Save changes to publish.', 'success'); }
-  catch (err) { $('annImage').value = ''; fail(err); }
-});
-$('annImgRemove').addEventListener('click', () => setAnnImage(''));
-function previewAnnouncement() { $('annCount').textContent = $('annText').value.length + ' / 500'; }
-$('annTry').addEventListener('click', () => {
-  if (!$('annText').value.trim() && !annImageUrl) return toast('Add text or a picture first', 'warning');
-  showAnnouncement({ text: $('annText').value, image: annImageUrl }, true);
-});
-['annOn', 'annText'].forEach((id) => $(id).addEventListener('input', previewAnnouncement));
 async function loadShopForm() {
   try { fillShopForm(await api('/settings/shop')); } catch (e) { fail(e); }
 }
@@ -530,11 +569,56 @@ $('shopForm').addEventListener('submit', async (e) => {
   if ($('maintOn').checked && !confirm('Turn on maintenance mode? Students will not be able to use the site until you turn it off.')) return;
   $('shopSave').disabled = true;
   try {
-    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value, announcement_enabled: $('annOn').checked, announcement_text: $('annText').value, announcement_image_url: annImageUrl } });
+    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value } });
     fillShopForm(s); applyShopStatus();
     toast('Shop status saved', 'success');
   } catch (err) { fail(err); } finally { $('shopSave').disabled = false; }
 });
+
+/* ---------------- Pickup schedule ---------------- */
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const slotRow = (s) => '<div class="row g-2 align-items-end mb-2 s-row">' +
+  '<div class="col-4 col-md-3"><label class="form-label small">Start</label><input type="time" class="form-control s-start" value="' + esc(s.start) + '"></div>' +
+  '<div class="col-4 col-md-3"><label class="form-label small">End</label><input type="time" class="form-control s-end" value="' + esc(s.end) + '"></div>' +
+  '<div class="col-4 col-md-3"><label class="form-label small">Limit</label><input type="number" min="1" max="500" class="form-control s-cap" value="' + esc(s.capacity) + '"></div>' +
+  '<div class="col-12 col-md-3"><button type="button" class="btn btn-sm btn-outline-danger s-del">Remove</button></div></div>';
+const todayPH = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+async function loadSchedule() {
+  try {
+    const cfg = await api('/pickup/config');
+    const isAdmin = Auth.user().role === 'admin';
+    $('sDays').innerHTML = DOW.map((n, i) => '<div class="form-check"><input class="form-check-input s-day" type="checkbox" id="sd' + i + '" value="' + i + '"' + (cfg.days.includes(i) ? ' checked' : '') + '><label class="form-check-label" for="sd' + i + '">' + n + '</label></div>').join('');
+    $('sAdvance').value = cfg.advance_days; $('sClosed').value = (cfg.closed || []).join('\n');
+    $('sSlots').innerHTML = cfg.slots.map(slotRow).join('');
+    $('schedForm').querySelectorAll('input,textarea,button').forEach((el) => { el.disabled = !isAdmin; });
+    $('sSave').classList.toggle('d-none', !isAdmin); $('sAddSlot').classList.toggle('d-none', !isAdmin);
+    $('sNote').textContent = isAdmin ? 'Slots are in Philippine time. A slot that has already started today cannot be assigned.' : 'Only admins can change the schedule. You can see who is coming below.';
+    if (!$('sDate').value) $('sDate').value = todayPH();
+    loadDay();
+  } catch (e) { fail(e); }
+}
+$('sAddSlot').addEventListener('click', () => $('sSlots').insertAdjacentHTML('beforeend', slotRow({ start: '09:00', end: '10:00', capacity: 20 })));
+$('sSlots').addEventListener('click', (e) => { const b = e.target.closest('.s-del'); if (b) b.closest('.s-row').remove(); });
+$('schedForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('sSave').disabled = true;
+  const body = {
+    days: [...document.querySelectorAll('.s-day:checked')].map((c) => Number(c.value)),
+    advance_days: Number($('sAdvance').value),
+    closed: $('sClosed').value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
+    slots: [...document.querySelectorAll('.s-row')].map((r) => ({ start: r.querySelector('.s-start').value, end: r.querySelector('.s-end').value, capacity: Number(r.querySelector('.s-cap').value) })),
+  };
+  try { await api('/pickup/config', { method: 'PUT', body }); toast('Pickup schedule saved', 'success'); loadSchedule(); }
+  catch (err) { fail(err); } finally { $('sSave').disabled = false; }
+});
+async function loadDay() {
+  try {
+    const d = await api('/pickup/day/' + ($('sDate').value || todayPH()));
+    $('sDay').innerHTML = (d.open ? '' : '<div class="muted small mb-2">Pickup is closed on this date.</div>') + d.slots.map((s) =>
+      '<div class="panel mb-2 py-2"><div class="d-flex justify-content-between"><b>' + esc(s.label) + '</b><span class="muted small">' + s.orders.length + ' / ' + s.capacity + ' booked</span></div>' +
+      (s.orders.length ? s.orders.map((o) => '<div class="small mt-1">#' + o.order_no + ' &middot; ' + esc(o.name) + (o.student_id ? ' <span class="muted">(' + esc(o.student_id) + ')</span>' : '') + ' ' + badge(STATUS, o.status) + '</div>').join('') : '<div class="muted small mt-1">No bookings</div>') + '</div>').join('');
+  } catch (e) { fail(e); }
+}
+$('sDate').addEventListener('change', loadDay);
 
 /* ---------------- Audit log (admin only) ---------------- */
 let auNext = null;

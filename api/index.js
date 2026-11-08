@@ -36,6 +36,7 @@ app.use('/api/auth', require('../routes/auth'));
 app.use('/api/products', lowStockHook, require('../routes/products')); // lowStockHook: emails admins when stock runs low
 app.use('/api/campuses', require('../routes/campuses'));
 app.use('/api/orders', lowStockHook, require('../routes/orders'));
+app.use('/api/pickup', require('../routes/pickup')); // pickup schedule: time slots and bookings
 app.use('/api/payments', require('../routes/payments'));
 app.use('/api/settings', require('../routes/settings'));
 app.use('/api/users', require('../routes/users'));

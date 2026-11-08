@@ -23,6 +23,36 @@ if (requireLogin()) {
     } catch (e) { document.getElementById('view').innerHTML = '<div class="panel text-danger">' + esc(e.message) + '</div>'; }
   }
 
+  /* ---------- pickup schedule picker ---------- */
+  let avail = [], booking = null;
+  const dateLabel = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+  function scheduleCard() {
+    const dates = avail.filter((d) => d.slots.length);
+    const head = '<h5 class="mb-1">Pickup schedule</h5>' + (booking
+      ? '<div class="alert alert-success py-2 small my-2">Your pickup: <b>' + dateLabel(booking.date) + ' &middot; ' + esc(booking.label) + '</b>. You can change it below.</div>'
+      : '<p class="muted small mb-3">Choose when you will pick up your order. Bring your school ID and order number.</p>');
+    if (!dates.length) return '<div class="panel mb-3" id="sched">' + head + '<div class="muted small">No pickup schedules are open right now. Please check again later.</div></div>';
+    const first = (booking && dates.find((d) => d.date === booking.date)) || dates.find((d) => d.slots.some((s) => s.status === 'available')) || dates[0];
+    return '<div class="panel mb-3" id="sched">' + head +
+      '<label class="form-label" for="pDate">Pickup date</label>' +
+      '<select id="pDate" class="form-select mb-3">' + dates.map((d) => '<option value="' + d.date + '"' + (d.date === first.date ? ' selected' : '') + '>' + dateLabel(d.date) + '</option>').join('') + '</select>' +
+      '<div class="muted small mb-2">Available pickup schedules</div><div class="row g-2" id="slotGrid"></div>' +
+      '<button class="btn btn-ms mt-3" id="slotSave" disabled>Confirm pickup schedule</button></div>';
+  }
+
+  function drawSlots() {
+    const day = avail.find((d) => d.date === document.getElementById('pDate').value);
+    document.getElementById('slotGrid').innerHTML = (day ? day.slots : []).map((s) => {
+      const off = s.status !== 'available';
+      const tag = s.status === 'available' ? '<span class="badge bg-success">Available &middot; ' + s.left + ' left</span>'
+        : s.status === 'full' ? '<span class="badge bg-danger">Fully booked</span>' : '<span class="badge bg-secondary">Time passed</span>';
+      const mine = booking && day && booking.date === day.date && booking.slot_id === s.id;
+      return '<div class="col-6"><label class="pay-opt h-100"' + (off ? ' style="opacity:.6;cursor:not-allowed"' : '') + '><input type="radio" name="slot" value="' + s.id + '" class="form-check-input me-2"' + (off ? ' disabled' : '') + (mine ? ' checked' : '') + '><b>' + esc(s.label) + '</b><div class="ms-4 mt-1">' + tag + '</div></label></div>';
+    }).join('') || '<div class="col-12 muted small">No time slots on this date.</div>';
+    document.getElementById('slotSave').disabled = !document.querySelector('input[name=slot]:checked') || (booking && day && booking.date === day.date && document.querySelector('input[name=slot]:checked')?.value === booking.slot_id);
+  }
+
   let gcash;
   async function render(retry) {
     const o = order, idx = STEPS.findIndex((s) => s[0] === o.status);
@@ -30,7 +60,10 @@ if (requireLogin()) {
     const canPay = o.payment_method === 'gcash_online' && o.payment_status !== 'paid' && o.status !== 'cancelled';
     const canReceipt = o.payment_method === 'gcash_manual' && ['unpaid','failed'].includes(o.payment_status) && o.status !== 'cancelled';
     const canCancel = o.status === 'pending' && o.payment_status !== 'paid';
+    const canSchedule = ['approved', 'shipped', 'ready_for_pickup'].includes(o.status);
     if (canReceipt && gcash === undefined) gcash = await loadGcash();
+    avail = []; booking = null;
+    if (canSchedule) { try { [booking, avail] = await Promise.all([api('/pickup/order/' + o.id), api('/pickup/availability')]); } catch { avail = null; } }
     document.getElementById('view').innerHTML =
       '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h2 class="mb-0">Order #' + o.order_no + '</h2><div>' + badge(STATUS, o.status) + ' ' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
       (confirming ? '<div class="alert alert-info">Confirming your payment. This takes a few seconds...</div>' : '') +
@@ -44,6 +77,7 @@ if (requireLogin()) {
       '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + peso(o.total) + '</th></tr></tfoot></table></div>' +
       (o.status === 'ready_for_pickup' ? '<div class="alert alert-success">Your order has arrived. Bring your school ID and order number <b>#' + o.order_no + '</b>.</div>' : '') +
       (o.campus ? '<div class="panel mb-3"><div class="muted small">Pickup location</div><div class="fw-bold">' + esc(o.campus.name) + '</div><div class="muted small">' + esc(o.campus.address || '') + '</div><div class="reminder small mt-2">' + esc(o.pickup_note || o.campus.pickup_note || 'Bring your school ID.') + '</div></div>' : '') +
+      (canSchedule && avail ? scheduleCard() : '') +
       '<div class="panel mb-3"><div class="muted small">Payment method</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div><div class="muted small mt-2">Placed</div><div>' + fmtDateTime(o.created_at) + '</div>' +
       (o.reference_number ? '<div class="muted small mt-2">Reference number</div><div>' + esc(o.reference_number) + '</div>' : '') + '</div>' +
       '<div class="panel mb-3"><h5 class="mb-3">Order history</h5>' + timelineHtml(o.events) + '</div>' +
@@ -54,6 +88,19 @@ if (requireLogin()) {
       (o.payment_status === 'pending_verification' ? '<div class="alert alert-warning">Receipt received. Staff will verify it soon and you will get an email.</div>' : '') +
       (canCancel ? '<button class="btn btn-outline-danger" id="cancelBtn">Cancel order</button>' : '');
 
+    if (document.getElementById('pDate')) {
+      drawSlots();
+      document.getElementById('pDate').addEventListener('change', drawSlots);
+      document.getElementById('slotGrid').addEventListener('change', drawSlots);
+      document.getElementById('slotSave').addEventListener('click', async (e) => {
+        const slot = document.querySelector('input[name=slot]:checked'); if (!slot) return;
+        e.target.disabled = true;
+        try {
+          await api('/pickup/book', { method: 'POST', body: { order_id: o.id, date: document.getElementById('pDate').value, slot_id: slot.value } });
+          toast('Pickup schedule saved', 'success'); load();
+        } catch (err) { fail(err); load(); } // reload so the slot list shows the latest places left
+      });
+    }
     document.getElementById('payBtn')?.addEventListener('click', async (e) => {
       e.target.disabled = true;
       try { const r = await api('/payments/checkout', { method: 'POST', body: { order_id: o.id } }); location.href = r.checkout_url; } catch (err) { fail(err); e.target.disabled = false; }
