@@ -10,10 +10,12 @@
 7. Run `db/migration-06-payment-settings.sql` (adds the editable GCash account for manual payments; set it in Admin > Payment settings).
 8. Run `db/migration-07-shop-settings.sql` (adds the shop open/closed switch and maintenance mode; set them in Admin > Shop status).
 9. Run `db/migration-08-order-events.sql` (adds the order status timeline: who changed an order and when; shown on the order page and in the admin order window).
-9. Run `db/migration-09-pickup-reminders.sql` (adds scheduled pickup reminder emails; on Vercel also set `CRON_SECRET`, see `.env.example`).
-10. Run `db/migration-10-announcement.sql` (adds the announcement popup).
-11. Run `db/migration-11-order-release.sql` (adds pickup release confirmation: staff check the student's school ID before an order is completed).
-12. (Optional) Run `db/seed.sql` for sample products.
+10. Run `db/migration-09-pickup-reminders.sql` (adds scheduled pickup reminder emails; on Vercel also set `CRON_SECRET`, see `.env.example`).
+11. Run `db/migration-10-announcement.sql` (adds the announcement popup).
+12. Run `db/migration-11-order-release.sql` (adds pickup release confirmation: staff check the student's school ID before an order is completed).
+13. Run `db/migration-12-rls-hardening.sql` (security: locks the database so only the server can use it; see the Security check section below).
+14. Run `db/migration-13-function-search-path.sql` (small security fix: pins the search path of the database functions, clears the Security Advisor warning).
+15. (Optional) Run `db/seed.sql` for sample products.
 7. **Project Settings > API**: copy `Project URL`, `anon` key, and `service_role` key.
    The service_role key is a secret. Never put it in frontend code or commit it.
 
@@ -77,3 +79,9 @@ This code was written without internet access, so it has not been run against li
 Replace `GroupName` with your actual group name (no spaces).
 - Documentation (all documents combined, PDF): `SIA101_GroupName_MerchSys.pdf`
 - Source code (ZIP, without `node_modules` and `.env`): `SIA101_GroupName_MerchSys.zip`
+
+## Security check: Row Level Security (run once, and again before the demo)
+1. Supabase > SQL Editor: run `db/migration-12-rls-hardening.sql`.
+2. Run `db/rls-audit.sql`. The first row must say PASS (0 failing). Screenshot it.
+3. Run `db/migration-13-function-search-path.sql`, then check Advisors > Security (0 errors).
+4. Follow `docs/security-rls-review.md` (section 4) for the anon-key tests and the regression test.
