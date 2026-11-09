@@ -2,7 +2,187 @@
 <script src="/js/theme.js"></script><script src="/js/loader.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Shop</title></head><body>
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Shop</title>
+<style>
+/* ===== HERO COLLAGE REDESIGN (overrides style.css; uses your theme variables so light + dark both work) ===== */
+.hero .hero-art{
+  position:relative !important; width:100%; max-width:480px; aspect-ratio:1/1;
+  margin:0 auto 32px; height:auto !important;
+}
+/* soft aurora disc, orbiting light arc, twinkling stars */
+.hero .hero-art .disc{
+  position:absolute !important; inset:6% !important; border-radius:50% !important;
+  background:
+    radial-gradient(circle at 24% 20%, rgba(125,211,252,.55), transparent 55%),
+    radial-gradient(circle at 82% 28%, rgba(167,139,250,.36), transparent 50%),
+    radial-gradient(circle at 58% 92%, rgba(244,176,214,.26), transparent 55%),
+    linear-gradient(160deg, var(--sky-2), var(--sky)) !important;
+  box-shadow:0 0 90px rgba(125,211,252,.22), inset 0 0 0 1px rgba(186,230,253,.25);
+}
+.hero .hero-art .disc::before{
+  content:""; position:absolute; inset:-6%; border-radius:50%;
+  background:conic-gradient(from 0deg, transparent 0 58%, rgba(125,211,252,.95) 82%, rgba(196,181,253,.9) 92%, transparent 100%);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+          mask:radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  opacity:.9; animation:heroSpin 14s linear infinite;
+}
+.hero .hero-art .disc::after,
+.hero .hero-art::after{
+  content:""; position:absolute; width:22px; height:22px; background:#e0f2fe; pointer-events:none;
+  clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);
+  filter:drop-shadow(0 0 6px rgba(125,211,252,.95)); animation:heroTwinkle 3.2s ease-in-out infinite;
+}
+.hero .hero-art .disc::after{top:7%; right:11%}
+.hero .hero-art::after{width:14px; height:14px; left:1%; top:7%; animation-delay:-1.6s}
+/* floating cut-out items (background removed in the browser) */
+.hero .hero-art .tile{
+  position:absolute !important; display:flex; align-items:center; justify-content:center;
+  overflow:visible; background:transparent; border:0; box-shadow:none; border-radius:0;
+  color:var(--link); font-size:clamp(2rem,6vw,3.5rem);
+  animation:heroFloat 6s ease-in-out infinite;
+  right:auto !important; bottom:auto !important; left:auto !important; top:auto !important;
+}
+.hero .hero-art .tile img{
+  width:100%; height:100%; object-fit:contain; display:block; background:transparent;
+  filter:drop-shadow(0 0 10px rgba(125,211,252,.45)) drop-shadow(0 16px 22px rgba(139,125,255,.28));
+  animation:heroGlow 4.5s ease-in-out infinite; animation-delay:inherit;
+}
+/* soft light pool under each floating item */
+.hero .hero-art .tile::after{
+  content:""; position:absolute; left:16%; right:16%; bottom:-4%; height:9%; border-radius:50%; z-index:-1;
+  background:radial-gradient(closest-side, rgba(125,211,252,.6), transparent); filter:blur(7px);
+}
+/* fallbacks: no picture -> glass circle with the letter; picture from another site -> white card */
+.hero .hero-art .tile.noimg{
+  background:rgba(255,255,255,.1); border:1px solid rgba(186,230,253,.45); border-radius:50% !important;
+  box-shadow:0 0 30px rgba(125,211,252,.35);
+}
+.hero .hero-art .tile.raw{background:#fff; border-radius:28px !important; overflow:hidden; box-shadow:0 0 30px rgba(125,211,252,.45)}
+.hero .hero-art .tile.raw img{object-fit:cover; filter:none; animation:none}
+.hero .hero-art .tile .cap{
+  position:absolute; left:50%; bottom:-6px; transform:translateX(-50%); max-width:86%; z-index:4;
+  padding:4px 11px; border-radius:999px; font:600 .7rem/1.2 'DM Sans',sans-serif; color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  background:rgba(10,18,28,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.2);
+}
+.hero .hero-art .t1{left:3% !important; top:15% !important; width:45%; height:64%; rotate:-3deg; animation-delay:0s}
+.hero .hero-art .t2{right:3% !important; top:3% !important; width:40%; height:46%; rotate:4deg; animation-delay:-2s}
+.hero .hero-art .t3{right:7% !important; top:49% !important; width:38%; height:38%; rotate:-2deg; animation-delay:-4s}
+.hero .hero-art .t3 .cap{bottom:2%}
+/* orbit + stars around each item (colours match the disc: sky blue, lavender, pink) */
+.hero .hero-art .t1{--c:125,211,252}
+.hero .hero-art .t2{--c:196,181,253}
+.hero .hero-art .t3{--c:244,176,214}
+.hero .hero-art .orb{
+  position:absolute; left:-14%; right:-14%; top:34%; bottom:30%; border-radius:50%; z-index:-1; pointer-events:none;
+  border:1px solid rgba(var(--c),.55); rotate:-14deg;
+  box-shadow:0 0 14px rgba(var(--c),.3), inset 0 0 14px rgba(var(--c),.14);
+}
+.hero .hero-art .orbstar{
+  position:absolute; left:-7px; top:-7px; width:14px; height:14px; pointer-events:none; will-change:transform;
+  filter:drop-shadow(0 0 6px rgba(var(--c),1)) drop-shadow(0 0 14px rgba(var(--c),.7));
+}
+.hero .hero-art .spark{
+  position:absolute; width:12px; height:12px; pointer-events:none;
+  filter:drop-shadow(0 0 5px rgba(var(--c),.95)); animation:heroTwinkle 3s ease-in-out infinite;
+}
+.hero .hero-art .spark b,.hero .hero-art .orbstar b{
+  display:block; width:100%; height:100%; background:#fff;
+  clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);
+}
+.hero .hero-art .spark.s1{left:-8%; top:4%}
+.hero .hero-art .spark.s2{right:-6%; top:18%; width:9px; height:9px; animation-delay:-1s}
+.hero .hero-art .spark.s3{left:0; bottom:12%; width:8px; height:8px; animation-delay:-2s}
+.hero .hero-art .spark.s4{right:4%; bottom:0; width:11px; height:11px; animation-delay:-.6s}
+/* countdown pill: frosted card centred under the collage */
+.hero .hero-art .cd-pill{
+  position:absolute !important; left:50% !important; bottom:-4% !important; right:auto !important; top:auto !important;
+  transform:translateX(-50%); width:max-content; max-width:94%; text-align:center;
+  padding:11px 18px 12px !important; border-radius:18px;
+  background:color-mix(in srgb, var(--surface) 80%, transparent);
+  border:1px solid var(--line);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 18px 40px rgba(10,25,40,.28);
+}
+/* thin light-blue accent line on top of the pill */
+.hero .hero-art .cd-pill::before{
+  content:""; position:absolute; left:18%; right:18%; top:-1px; height:2px; border-radius:2px;
+  background:linear-gradient(90deg,transparent,#38bdf8,transparent);
+}
+.hero .hero-art .cd-pill .cd-label{
+  display:block; text-transform:uppercase; letter-spacing:.12em; font-weight:700; font-size:.63rem; color:var(--muted);
+}
+.hero .hero-art .cd-pill .cd-label::before{
+  content:""; display:inline-block; width:7px; height:7px; margin-right:7px; border-radius:50%;
+  background:#22c55e; animation:heroPulse 1.6s ease-out infinite; vertical-align:middle;
+}
+.hero .hero-art .cd-seg{display:flex; justify-content:center; margin-top:7px}
+.hero .hero-art .cd-seg .u{min-width:48px; padding:0 12px; text-align:center}
+.hero .hero-art .cd-seg .u + .u{border-left:1px solid var(--line)}
+.hero .hero-art .cd-seg b{
+  display:block; font-family:'Unbounded',sans-serif; font-weight:800; line-height:1.1; color:var(--ink);
+  font-size:clamp(1.05rem,3.2vw,1.35rem); font-variant-numeric:tabular-nums;
+}
+.hero .hero-art .cd-seg .u:last-child b{color:var(--link)}
+.hero .hero-art .cd-seg .u span{
+  display:block; margin-top:3px; font-size:.56rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);
+}
+/* ===== LIGHT MODE ENHANCEMENTS (dark mode is untouched) ===== */
+:root:not([data-bs-theme="dark"]) .hero .hero-art .t1{--c:37,132,235}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .t2{--c:124,92,236}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .t3{--c:236,100,165}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .disc{
+  background:
+    radial-gradient(circle at 24% 20%, rgba(96,165,250,.6), transparent 55%),
+    radial-gradient(circle at 82% 28%, rgba(167,139,250,.5), transparent 52%),
+    radial-gradient(circle at 58% 92%, rgba(249,168,212,.42), transparent 55%),
+    linear-gradient(160deg,#dbeafe,#ebe5ff) !important;
+  box-shadow:0 44px 80px -34px rgba(37,99,235,.5), 0 0 0 1px rgba(96,165,250,.4), inset 0 2px 0 rgba(255,255,255,.85);
+}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .disc::before{
+  background:conic-gradient(from 0deg, transparent 0 55%, rgba(37,99,235,.95) 82%, rgba(139,92,246,.95) 93%, transparent 100%);
+  opacity:1;
+}
+/* stars: coloured instead of white so they show on a light background */
+:root:not([data-bs-theme="dark"]) .hero .hero-art .disc::after,
+:root:not([data-bs-theme="dark"]) .hero .hero-art::after{
+  background:linear-gradient(135deg,#3b82f6,#8b5cf6); filter:drop-shadow(0 0 5px rgba(99,102,241,.55));
+}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .spark{filter:drop-shadow(0 0 4px rgba(var(--c),.75))}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .spark b,
+:root:not([data-bs-theme="dark"]) .hero .hero-art .orbstar b{background:rgb(var(--c))}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .orbstar{filter:drop-shadow(0 0 6px rgba(var(--c),.9)) drop-shadow(0 0 12px rgba(var(--c),.5))}
+/* orbit ring: stronger line */
+:root:not([data-bs-theme="dark"]) .hero .hero-art .orb{
+  border:1.5px solid rgba(var(--c),.6);
+  box-shadow:0 0 14px rgba(var(--c),.3), inset 0 0 16px rgba(var(--c),.12);
+}
+/* items: real drop shadow for depth + a tinted glow */
+:root:not([data-bs-theme="dark"]) .hero .hero-art .tile img{animation-name:heroGlowL}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .tile.raw img{animation:none; filter:none}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .tile::after{background:radial-gradient(closest-side, rgba(30,64,175,.4), transparent); filter:blur(8px)}
+/* countdown card */
+:root:not([data-bs-theme="dark"]) .hero .hero-art .cd-pill{
+  background:rgba(255,255,255,.9); border:1px solid rgba(96,165,250,.38);
+  box-shadow:0 20px 38px -12px rgba(30,64,175,.35);
+}
+:root:not([data-bs-theme="dark"]) .hero .hero-art .cd-pill::before{background:linear-gradient(90deg,transparent,#3b82f6,#8b5cf6,transparent)}
+@keyframes heroGlowL{
+  0%,100%{filter:drop-shadow(0 14px 14px rgba(30,58,138,.24)) drop-shadow(0 0 10px rgba(var(--c),.35))}
+  50%{filter:drop-shadow(0 18px 20px rgba(30,58,138,.34)) drop-shadow(0 0 22px rgba(var(--c),.7))}
+}
+@keyframes heroFloat{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@keyframes heroGlow{
+  0%,100%{filter:drop-shadow(0 0 10px rgba(125,211,252,.4)) drop-shadow(0 16px 22px rgba(139,125,255,.26))}
+  50%{filter:drop-shadow(0 0 24px rgba(125,211,252,.9)) drop-shadow(0 20px 32px rgba(139,125,255,.5))}
+}
+@keyframes heroTwinkle{0%,100%{opacity:.35;scale:.7}50%{opacity:1;scale:1.15}}
+@keyframes heroSpin{to{transform:rotate(360deg)}}
+@keyframes heroPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}100%{box-shadow:0 0 0 9px rgba(34,197,94,0)}}
+@media (max-width:575px){.hero .hero-art{max-width:340px}}
+@media (prefers-reduced-motion:reduce){.hero .hero-art,.hero .hero-art *,.hero .hero-art::after,.hero .hero-art *::before,.hero .hero-art *::after{animation:none !important}}
+</style></head><body>
 <div id="nav"></div>
 <main class="container pb-4">
   <section class="hero">
@@ -47,6 +227,25 @@ renderNav('shop'); renderFooter();
 const CATS = [['All', '✨'], ['Clothes', '👕'], ['Bags', '🎒'], ['Caps', '🧢'], ['Pins', '📌'], ['Others', '🎁']];
 let products = [], cat = 'All', deadline = null;
 
+// ====== PUT YOUR PICTURES HERE ======
+// Key = product name EXACTLY as it appears in your database.
+// Value = path to the image file (relative to your site root).
+// An image_url set from the Admin page still takes priority over this list.
+// (Duplicate keys removed: in JavaScript the last duplicate wins, so these are your effective values.)
+const IMAGES = {
+  'BU Tote Bag':         '/img/tote-bag.png',
+  'BU Cap':              '/img/9.png',
+  'BU Enamel Pin Set':   '/img/pin-set.png',
+  'BU Hoodie':           '/img/2.png',
+  'BU Varsity Teet':     '/img/pin-set.png',
+  'Lanyard + ID Holder': '/img/pin-set.png',
+  'Tumbler 500ml':       '/img/6.png',
+  'Varsity T-Shirt':     '/img/5.png',
+  'Tote Bag':            '/img/12.png'
+};
+const imgOf = (p) => p.image_url || IMAGES[p.name] || '';
+// =====================================
+
 function drawCats() {
   document.getElementById('cats').innerHTML = CATS.map(([n, i]) =>
     '<button class="cat ' + (n === cat ? 'on' : '') + '" data-c="' + n + '" role="tab" aria-selected="' + (n === cat) + '"><div class="ico">' + i + '</div>' + n + '</button>').join('');
@@ -58,7 +257,7 @@ function card(p) {
   const isNew = Date.now() - new Date(p.created_at) < 14 * 864e5;
   const off = closed || soldOut;
   return '<div class="col-6 col-md-4 col-lg-3"><div class="product"><div class="pic">' +
-    (p.image_url ? '<img src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0))) +
+    (imgOf(p) ? '<img src="' + esc(imgOf(p)) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0))) +
     (low ? '<span class="tag few">Few left</span>' : isNew && !off ? '<span class="tag new">New</span>' : '') + '</div>' +
     '<div class="body"><div class="muted small">' + esc(p.category) + '</div><div class="fw-bold">' + esc(p.name) + '</div>' +
     '<div class="muted small">' + (soldOut ? 'Sold out' : closed ? 'Pre-order closed' : (p.preorder_deadline ? 'Closes ' + fmtDate(p.preorder_deadline) : p.stock + ' available')) + '</div>' +
@@ -80,10 +279,12 @@ function tick() {
   const el = document.getElementById('countdown');
   if (!deadline) return;
   const ms = deadline.at - Date.now();
-  if (ms <= 0) { el.innerHTML = '<small>Pre-order closed for ' + esc(deadline.name) + '</small>'; return; }
+  if (ms <= 0) { el.innerHTML = '<small>Pre-order closed</small>'; return; }
   const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4), s = Math.floor(ms % 6e4 / 1e3);
   const pad = (n) => String(n).padStart(2, '0');
-  el.innerHTML = '<small>Next pre-order closes in</small><div class="display-num">' + (d > 0 ? d + 'd ' : '') + pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's</div><small>' + esc(deadline.name) + '</small>';
+  const units = [[pad(d), 'Days'], [pad(h), 'Hrs'], [pad(m), 'Min'], [pad(s), 'Sec']];
+  el.innerHTML = '<small class="cd-label">Next pre-order closes in</small><div class="cd-seg">' +
+    units.map((u) => '<div class="u"><b>' + u[0] + '</b><span>' + u[1] + '</span></div>').join('') + '</div>';
 }
 
 document.getElementById('cats').addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (b) { cat = b.dataset.c; drawCats(); drawGrid(); } });
@@ -102,12 +303,99 @@ document.getElementById('grid').addEventListener('click', (e) => {
   location.href = '/checkout.html?product=' + encodeURIComponent(b.dataset.buy);
 });
 
+// Cut the item out of its photo: remove the white background (only the part touching the edges) and crop to the item
+const _cut = new Map();
+function cutout(src) {
+  if (_cut.has(src)) return _cut.get(src);
+  const job = new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onerror = () => reject({ type: 'load' });
+    im.onload = () => {
+      try {
+        const sc = Math.min(1, 640 / Math.max(im.naturalWidth, im.naturalHeight));
+        const w = Math.max(1, Math.round(im.naturalWidth * sc)), h = Math.max(1, Math.round(im.naturalHeight * sc));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const x = c.getContext('2d', { willReadFrequently: true });
+        x.drawImage(im, 0, 0, w, h);
+        const d = x.getImageData(0, 0, w, h), px = d.data;
+        const isBg = (p) => { const i = p * 4; return px[i + 3] < 16 || (px[i] >= 238 && px[i + 1] >= 238 && px[i + 2] >= 238); };
+        const bg = new Uint8Array(w * h), st = [];
+        const push = (p) => { if (!bg[p] && isBg(p)) { bg[p] = 1; st.push(p); } };
+        for (let i = 0; i < w; i++) { push(i); push((h - 1) * w + i); }
+        for (let j = 0; j < h; j++) { push(j * w); push(j * w + w - 1); }
+        while (st.length) {
+          const p = st.pop(), cx = p % w, cy = (p / w) | 0;
+          if (cx > 0) push(p - 1); if (cx < w - 1) push(p + 1); if (cy > 0) push(p - w); if (cy < h - 1) push(p + w);
+        }
+        let x0 = w, y0 = h, x1 = -1, y1 = -1;
+        for (let p = 0; p < w * h; p++) {
+          const i = p * 4;
+          if (bg[p]) { px[i + 3] = 0; continue; }
+          const cx = p % w, cy = (p / w) | 0;
+          const edge = (cx > 0 && bg[p - 1]) || (cx < w - 1 && bg[p + 1]) || (cy > 0 && bg[p - w]) || (cy < h - 1 && bg[p + w]);
+          if (edge) { // soften the fringe so no white outline is left around the item
+            const lum = Math.min(px[i], px[i + 1], px[i + 2]);
+            if (lum > 200) px[i + 3] = Math.max(0, Math.min(255, (238 - lum) / 38 * 255));
+          }
+          if (px[i + 3] > 20) { if (cx < x0) x0 = cx; if (cx > x1) x1 = cx; if (cy < y0) y0 = cy; if (cy > y1) y1 = cy; }
+        }
+        if (x1 < 0) return reject({ type: 'empty' });
+        x.putImageData(d, 0, 0);
+        const pad = 2; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+        const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+        o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+        resolve(o.toDataURL('image/png'));
+      } catch (e) { reject({ type: 'taint' }); } // picture hosted on another site: the browser blocks pixel access
+    };
+    im.src = src;
+  });
+  _cut.set(src, job);
+  return job;
+}
+
+// Orbit ring + stars drawn around each floating item
+const FX = '<i class="orb"></i><i class="orbstar"><b></b></i><i class="spark s1"><b></b></i><i class="spark s2"><b></b></i><i class="spark s3"><b></b></i><i class="spark s4"><b></b></i>';
+const STILL = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let orbitOn = false;
+function orbitLoop(t) {
+  const tilt = -14 * Math.PI / 180, c = Math.cos(tilt), sn = Math.sin(tilt);
+  document.querySelectorAll('.hero-art .tile').forEach((tile, i) => {
+    const star = tile.querySelector('.orbstar'); if (!star) return;
+    const w = tile.offsetWidth, h = tile.offsetHeight;
+    const ang = (STILL ? 0 : t) * (0.00075 + i * 0.00012) + i * 2.1;   // each item orbits at its own pace
+    const x = w * 0.64 * Math.cos(ang), y = h * 0.18 * Math.sin(ang);   // same ellipse as the ring
+    star.style.transform = 'translate(' + (w * 0.5 + x * c - y * sn) + 'px,' + (h * 0.52 + x * sn + y * c) + 'px)';
+    star.style.zIndex = Math.sin(ang) > 0 ? 3 : -1;                      // passes in front, then behind the item
+  });
+  requestAnimationFrame(orbitLoop);
+}
+
+// Hero collage: prefer in-stock products that have a picture, then fill with the rest
+function drawHero() {
+  const good = products.filter((p) => imgOf(p) && p.stock > 0);
+  const rest = products.filter((p) => !good.includes(p));
+  good.concat(rest).slice(0, 3).forEach((p, i) => {
+    const el = document.getElementById('h' + (i + 1)), src = imgOf(p);
+    const cap = '<span class="cap">' + esc(p.name) + '</span>' + FX;
+    const letter = () => { el.classList.add('noimg'); el.innerHTML = esc(p.name.charAt(0)) + cap; };
+    el.classList.remove('noimg', 'raw');
+    if (!src) { letter(); return; }
+    el.innerHTML = cap;
+    cutout(src).then((url) => { el.innerHTML = '<img src="' + url + '" alt="">' + cap; })
+      .catch((e) => {
+        if (e && (e.type === 'taint' || e.type === 'empty')) { el.classList.add('raw'); el.innerHTML = '<img src="' + esc(src) + '" alt="">' + cap; }
+        else letter();
+      });
+  });
+}
+
 (async () => {
   drawCats();
   try {
     products = await api('/products', { auth: false });
     drawGrid();
-    products.slice(0, 3).forEach((p, i) => { document.getElementById('h' + (i + 1)).innerHTML = p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : esc(p.name.charAt(0)); });
+    drawHero();
+    if (!orbitOn) { orbitOn = true; requestAnimationFrame(orbitLoop); }
     const open = products.filter((p) => p.preorder_deadline && new Date(p.preorder_deadline) > new Date() && p.stock > 0)
       .sort((a, b) => new Date(a.preorder_deadline) - new Date(b.preorder_deadline))[0];
     if (open) { deadline = { at: new Date(open.preorder_deadline).getTime(), name: open.name }; tick(); setInterval(tick, 1000); }
