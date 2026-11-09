@@ -92,7 +92,27 @@
         </form>
       </section>
 
-      <!-- SHOP STATUS -->
+      <style>
+/* Homepage pictures card */
+.hero-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media (max-width:767px){.hero-slots{grid-template-columns:1fr}}
+.hslot{border:1px solid var(--line);border-radius:16px;padding:.9rem;background:var(--surface);display:flex;flex-direction:column;gap:.7rem}
+.hslot-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.hslot-head b{font-size:1rem}
+.hslot-head span{font-size:.78rem;color:var(--muted)}
+.hslot-pic{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;aspect-ratio:1/1;width:100%;border:2px dashed var(--line-in);border-radius:14px;overflow:hidden;cursor:pointer;color:var(--link);text-align:center;padding:.5rem;
+  background:var(--line-3);transition:border-color .15s,background .15s}
+.hslot-pic:hover,.hslot-pic:focus-within{border-color:var(--link);background:var(--line-2)}
+.hslot-pic input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.hslot-pic img{max-width:100%;max-height:100%;object-fit:contain;pointer-events:none}
+.hslot-pic .plus{font-size:2rem;line-height:1;font-weight:300}
+.hslot-pic .t{font-weight:700;font-size:.9rem}
+.hslot-pic .s{font-size:.75rem;color:var(--muted)}
+.hslot-pic .badge-chg{position:absolute;right:8px;bottom:8px;background:rgba(18,50,74,.82);color:#fff;font-size:.72rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;pointer-events:none}
+.hslot-state{font-size:.75rem;font-weight:600;border-radius:999px;padding:.1rem .55rem;background:var(--line-2);color:var(--muted)}
+.hslot-state.on{background:rgba(31,122,88,.14);color:var(--ok)}
+</style>
+<!-- SHOP STATUS -->
       <section id="sec-shop" class="d-none">
         <form class="ux-card" id="shopForm">
           <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="home"></i></span><div class="grow"><h2>Shop status</h2><p>Pause new orders or put the whole site into maintenance. Staff and admin can always use the site.</p></div></div>
@@ -117,6 +137,15 @@
             <div class="d-flex justify-content-between align-items-center muted small mt-1"><span id="annCount">0 / 500</span><button type="button" class="btn btn-sm btn-outline-ms" id="annTry">Preview popup</button></div>
           </div>
           <div class="ux-foot"><button class="btn btn-ms" id="shopSave">Save changes</button></div>
+        </form>
+
+        <form class="ux-card mt-3" id="heroForm">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="home"></i></span><div class="grow"><h2>Homepage pictures</h2><p>The 3 floating items beside "Wear BU." on the home page. Upload a picture and set its name tag. Leave a slot empty to show a product automatically.</p></div></div>
+          <div class="ux-body">
+            <div id="heroSlots"></div>
+            <div class="muted small mt-3">Tip: a PNG with a transparent background looks best. JPG, PNG, GIF or WebP, max 5MB each. Remember to press <b>Save pictures</b> after uploading.</div>
+          </div>
+          <div class="ux-foot"><button class="btn btn-ms" id="heroSave">Save pictures</button></div>
         </form>
 
       </section>
@@ -676,7 +705,7 @@ $('annTry').addEventListener('click', () => {
 });
 ['annOn', 'annText'].forEach((id) => $(id).addEventListener('input', previewAnnouncement));
 async function loadShopForm() {
-  try { fillShopForm(await api('/settings/shop')); } catch (e) { fail(e); }
+  try { const sh = await api('/settings/shop'); fillShopForm(sh); fillHeroForm(sh); } catch (e) { fail(e); }
   loadMailStatus();
 }
 
@@ -689,6 +718,48 @@ $('shopForm').addEventListener('submit', async (e) => {
     fillShopForm(s); applyShopStatus();
     toast('Shop status saved', 'success');
   } catch (err) { fail(err); } finally { $('shopSave').disabled = false; }
+});
+
+/* ---------------- Homepage hero pictures (admin only) ---------------- */
+const HERO_NAMES = ['Left item (big)', 'Top right item', 'Bottom right item'];
+let heroItems = [{ url: '', label: '' }, { url: '', label: '' }, { url: '', label: '' }];
+function drawHeroSlots() {
+  $('heroSlots').className = 'hero-slots';
+  $('heroSlots').innerHTML = heroItems.map((it, i) =>
+    '<div class="hslot" data-slot="' + i + '">' +
+      '<div class="hslot-head"><div><b>Slot ' + (i + 1) + '</b><div class="muted small">' + HERO_NAMES[i] + '</div></div>' +
+        '<span class="hslot-state ' + (it.url ? 'on' : '') + '">' + (it.url ? 'Custom picture' : 'Automatic') + '</span></div>' +
+      '<label class="hslot-pic" title="Click to ' + (it.url ? 'change' : 'upload') + ' the picture">' +
+        (it.url ? '<img src="' + esc(it.url) + '" alt="Slot ' + (i + 1) + ' picture"><span class="badge-chg">Change picture</span>'
+                : '<span class="plus">+</span><span class="t">Upload picture</span><span class="s">or leave empty to use a product</span>') +
+        '<input type="file" accept="image/*" class="h-file" aria-label="Picture for slot ' + (i + 1) + '"></label>' +
+      '<div><label class="form-label small mb-1" for="hLabel' + i + '">Name tag</label>' +
+        '<input id="hLabel' + i + '" type="text" class="form-control h-label" maxlength="40" placeholder="e.g. BU Tote Bag" value="' + esc(it.label) + '"></div>' +
+      (it.url ? '<button type="button" class="btn btn-sm btn-outline-danger h-remove">Remove picture</button>' : '') +
+    '</div>').join('');
+}
+function fillHeroForm(s) {
+  heroItems = [1, 2, 3].map((n) => ({ url: s['hero' + n + '_url'] || '', label: s['hero' + n + '_label'] || '' }));
+  drawHeroSlots();
+}
+$('heroSlots').addEventListener('input', (e) => {
+  const row = e.target.closest('[data-slot]'); if (row && e.target.classList.contains('h-label')) heroItems[+row.dataset.slot].label = e.target.value;
+});
+$('heroSlots').addEventListener('change', async (e) => {
+  if (!e.target.classList.contains('h-file')) return;
+  const row = e.target.closest('[data-slot]'), i = +row.dataset.slot, file = e.target.files[0]; if (!file) return;
+  const f = new FormData(); f.append('image', file);
+  try { const r = await api('/settings/hero-image', { method: 'POST', form: f }); heroItems[i].url = r.url; drawHeroSlots(); toast('Picture uploaded. Press Save pictures to publish.', 'success'); }
+  catch (err) { e.target.value = ''; fail(err); }
+});
+$('heroSlots').addEventListener('click', (e) => {
+  if (!e.target.classList.contains('h-remove')) return;
+  heroItems[+e.target.closest('[data-slot]').dataset.slot].url = ''; drawHeroSlots();
+});
+$('heroForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('heroSave').disabled = true;
+  try { fillHeroForm(await api('/settings/hero', { method: 'PUT', body: { items: heroItems } })); toast('Homepage pictures saved', 'success'); }
+  catch (err) { fail(err); } finally { $('heroSave').disabled = false; }
 });
 
 /* ---------------- Pickup schedule ---------------- */

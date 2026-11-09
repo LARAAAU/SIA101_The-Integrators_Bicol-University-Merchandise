@@ -35,7 +35,7 @@ update public.profiles set role = 'admin' where university_email = 'your@email.c
 After that you can promote staff from the Users page.
 
 ## 4. Online payment: Maya Checkout sandbox (no sign-up needed)
-PayMongo sign-ups may be paused. Maya publishes **public sandbox keys** for testing, so you can use those.
+Maya publishes **public sandbox keys** for testing, so you can use those.
 1. Open https://developers.maya.ph/reference/sandbox-credentials-and-cards
 2. In the **Checkout** keys, copy a **public key** (`pk-...`) and its **secret key** (`sk-...`) from the same row.
 3. Put them in `.env`:
@@ -46,7 +46,6 @@ PayMongo sign-ups may be paused. Maya publishes **public sandbox keys** for test
 4. Restart the server. Run `db/migration-05-payment-gateway.sql` in Supabase first.
 5. To test: place an order with **Online payment**, pay with the **sandbox test card or test Maya wallet** listed on that same Maya page (no real money), then you are redirected back and the order turns **Paid** automatically.
 6. These keys are shared by every developer who uses them, so never treat the data as private. Do not put real card numbers.
-7. If PayMongo opens again, set `PAYMONGO_SECRET_KEY` and leave the Maya keys blank (or set `PAYMENT_PROVIDER=paymongo`). Nothing else changes.
 
 ## 5. Resend (emails)
 1. Sign up at resend.com, create an API key, put it in `RESEND_API_KEY`.
@@ -70,7 +69,7 @@ Check `git status` first: `.env` must NOT be listed (it is in `.gitignore`).
 3. Deploy. Test `https://YOUR-APP.vercel.app/api/health`.
 
 ## Secrets and sharing (checklist for #91)
-Secrets are the keys and passwords in `.env`: the Supabase `service_role` key, `RESEND_API_KEY`, `MAYA_SECRET_KEY`, `PAYMONGO_SECRET_KEY` and `CRON_SECRET`. They live only in `.env` (local) and in Vercel Environment Variables (deployed).
+Secrets are the keys and passwords in `.env`: the Supabase `service_role` key, `RESEND_API_KEY`, `MAYA_SECRET_KEY` and `CRON_SECRET`. They live only in `.env` (local) and in Vercel Environment Variables (deployed).
 
 **Rules**
 - `.env` is in `.gitignore`. Never commit it, and never put it in a zip, chat, screenshot or document. Only `.env.example` (placeholders) is shared.
@@ -84,7 +83,7 @@ Secrets are the keys and passwords in `.env`: the Supabase `service_role` key, `
 **Rotate (replace) a secret when it was shared by mistake, and once before the final deployment**
 1. Supabase > Project Settings > API: create a new secret / `service_role` key (or reset the JWT secret: this also changes the `anon` key and logs everyone out, so update both in `.env`).
 2. Resend > API Keys: create a new key, then delete the old one.
-3. PayMongo / Maya dashboards: roll the secret key (test or sandbox keys are low risk; live keys are not).
+3. Maya dashboard: roll the secret key (test or sandbox keys are low risk; live keys are not).
 4. New `CRON_SECRET`: `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`.
 5. Put the new values in `.env` and in Vercel (Settings > Environment Variables), redeploy, then place a test order to check emails and login still work.
 
@@ -93,7 +92,7 @@ Maya sandbox keys in `.env.example` are Maya's public demo keys (published in th
 The old MerchSys repo contained a `.env` with the MongoDB connection string. Change that database password or delete the old cluster.
 
 ## Not verified yet
-This code was written without internet access, so it has not been run against live Supabase, Maya, or Resend. Test each flow in test mode and check the PayMongo response fields against their docs while testing.
+This code was written without internet access, so it has not been run against live Supabase, Maya, or Resend. Test each flow in test mode.
 
 ## Submission file names (IT 118 format: SIA101_GroupName_ProjectTitle)
 Replace `GroupName` with your actual group name (no spaces).

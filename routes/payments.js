@@ -2,12 +2,12 @@ const router = require('express').Router();
 const { admin } = require('../lib/supabase');
 const { requireAuth } = require('../middleware/auth');
 const gateway = require('../lib/gateway');
-const { getOrder, syncPayment, syncByCheckoutId } = require('../lib/payments');
+const { getOrder, syncPayment } = require('../lib/payments');
 
 const inFlight = new Set(); // orders that are creating a checkout right now
 
 // POST /api/payments/checkout  { order_id }  -> { checkout_url }
-// Creates a hosted checkout page with the payment provider (Maya or PayMongo) and returns its URL.
+// Creates a hosted Maya checkout page and returns its URL.
 router.post('/checkout', requireAuth, async (req, res) => {
   if (!gateway.configured()) return res.status(500).json({ message: 'Online payment is not configured' });
 
@@ -22,11 +22,10 @@ router.post('/checkout', requireAuth, async (req, res) => {
   inFlight.add(order.id);
   try {
     // Before opening a NEW checkout, check the previous one. If it was already paid (the webhook may not have arrived yet),
-    // stop here so the student is never asked to pay twice. Otherwise close the old page and continue.
+    // stop here so the student is never asked to pay twice. Otherwise open a new checkout.
     if (order.checkout_id) {
       const synced = await syncPayment(order);
       if (synced.payment_status === 'paid') return res.status(400).json({ message: 'Order is already paid' });
-      await gateway.expireCheckout(order.checkout_id);
     }
 
     const base = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
@@ -54,20 +53,6 @@ router.get('/verify/:orderId', requireAuth, async (req, res) => {
     return res.status(403).json({ message: 'Not your order' });
   const fresh = await syncPayment(order);
   res.json({ payment_status: fresh.payment_status, status: fresh.status });
-});
-
-// POST /api/payments/webhook  (PayMongo -> MerchSys; Maya uses the verify flow instead)
-// We never trust the payload: we read the checkout id, then confirm with the provider's API.
-router.post('/webhook', async (req, res) => {
-  try {
-    const eventType = req.body?.data?.attributes?.type;
-    const checkoutId = req.body?.data?.attributes?.data?.id;
-    // Repeated deliveries of the same event are harmless: markPaid only acts once per payment.
-    if (eventType === 'checkout_session.payment.paid' && checkoutId) await syncByCheckoutId(checkoutId);
-  } catch (e) {
-    console.error('[webhook]', e.message);
-  }
-  res.status(200).json({ received: true });
 });
 
 module.exports = router;

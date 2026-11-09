@@ -309,6 +309,7 @@ function cutout(src) {
   if (_cut.has(src)) return _cut.get(src);
   const job = new Promise((resolve, reject) => {
     const im = new Image();
+    im.crossOrigin = 'anonymous';
     im.onerror = () => reject({ type: 'load' });
     im.onload = () => {
       try {
@@ -370,21 +371,27 @@ function orbitLoop(t) {
   requestAnimationFrame(orbitLoop);
 }
 
-// Hero collage: prefer in-stock products that have a picture, then fill with the rest
+// Hero collage: pictures set by the admin (Admin > Shop status > Homepage pictures) come first;
+// any empty slot is filled with an in-stock product that has a picture, then the rest
+let heroCfg = {};
 function drawHero() {
   const good = products.filter((p) => imgOf(p) && p.stock > 0);
   const rest = products.filter((p) => !good.includes(p));
-  good.concat(rest).slice(0, 3).forEach((p, i) => {
-    const el = document.getElementById('h' + (i + 1)), src = imgOf(p);
-    const cap = '<span class="cap">' + esc(p.name) + '</span>' + FX;
-    const letter = () => { el.classList.add('noimg'); el.innerHTML = esc(p.name.charAt(0)) + cap; };
+  const pool = good.concat(rest).map((p) => ({ src: imgOf(p), name: p.name }));
+  [1, 2, 3].forEach((n) => {
+    const el = document.getElementById('h' + n), url = heroCfg['hero' + n + '_url'], label = heroCfg['hero' + n + '_label'];
+    const it = url ? { src: url, name: label || '' } : pool.shift();
+    if (!it) return;
+    const cap = (it.name ? '<span class="cap">' + esc(it.name) + '</span>' : '') + FX;
+    const letter = () => { el.classList.add('noimg'); el.innerHTML = esc((it.name || '?').charAt(0)) + cap; };
+    const raw = () => { el.classList.add('raw'); el.innerHTML = '<img src="' + esc(it.src) + '" alt="">' + cap; };
     el.classList.remove('noimg', 'raw');
-    if (!src) { letter(); return; }
+    if (!it.src) { letter(); return; }
     el.innerHTML = cap;
-    cutout(src).then((url) => { el.innerHTML = '<img src="' + url + '" alt="">' + cap; })
+    cutout(it.src).then((u) => { el.innerHTML = '<img src="' + u + '" alt="">' + cap; })
       .catch((e) => {
-        if (e && (e.type === 'taint' || e.type === 'empty')) { el.classList.add('raw'); el.innerHTML = '<img src="' + esc(src) + '" alt="">' + cap; }
-        else letter();
+        if (e && (e.type === 'taint' || e.type === 'empty')) raw();
+        else { const t = new Image(); t.onload = raw; t.onerror = letter; t.src = it.src; }
       });
   });
 }
@@ -394,6 +401,7 @@ function drawHero() {
   try {
     products = await api('/products', { auth: false });
     drawGrid();
+    try { heroCfg = await api('/settings/shop', { auth: false }) || {}; } catch {}
     drawHero();
     if (!orbitOn) { orbitOn = true; requestAnimationFrame(orbitLoop); }
     const open = products.filter((p) => p.preorder_deadline && new Date(p.preorder_deadline) > new Date() && p.stock > 0)

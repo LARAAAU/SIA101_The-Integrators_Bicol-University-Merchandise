@@ -13,6 +13,8 @@ const upload = multer({
 });
 const ANN_IMG_PREFIX = () => `${(process.env.SUPABASE_URL || '').replace(/\/$/, '')}/storage/v1/object/public/product-images/announcements/`;
 
+const HERO_IMG_PREFIX = () => `${(process.env.SUPABASE_URL || '').replace(/\/$/, '')}/storage/v1/object/public/product-images/hero/`;
+
 const EMPTY = { gcash_name: '', gcash_number: '', gcash_note: '' };
 
 // Accepts 09XXXXXXXXX, +639XXXXXXXXX or 639XXXXXXXXX (spaces and dashes allowed). Returns 09XXXXXXXXX or null.
@@ -63,6 +65,36 @@ router.post('/announcement-image', adminOnly, upload.single('image'), async (req
   const { error } = await admin.storage.from('product-images').upload(name, req.file.buffer, { contentType: kind.mime });
   if (error) return res.status(500).json({ message: 'Image upload failed: ' + error.message });
   res.json({ url: admin.storage.from('product-images').getPublicUrl(name).data.publicUrl });
+});
+
+// POST /api/settings/hero-image  (admin only, multipart: image) - stores one homepage hero picture, returns its public URL
+router.post('/hero-image', adminOnly, upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'Choose an image first' });
+  const kind = detectImage(req.file.buffer);
+  if (!kind) return res.status(400).json({ message: badImage().message });
+  const name = `hero/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${kind.ext}`;
+  const { error } = await admin.storage.from('product-images').upload(name, req.file.buffer, { contentType: kind.mime });
+  if (error) return res.status(500).json({ message: 'Image upload failed: ' + error.message });
+  res.json({ url: admin.storage.from('product-images').getPublicUrl(name).data.publicUrl });
+});
+
+// PUT /api/settings/hero  (admin only) - body: { items: [{ url, label } x3] }. Empty url = pick a product automatically.
+router.put('/hero', adminOnly, async (req, res) => {
+  const items = Array.isArray(req.body.items) ? req.body.items.slice(0, 3) : [];
+  const row = { id: 1, updated_at: new Date().toISOString(), updated_by: req.user.id };
+  for (let i = 0; i < 3; i++) {
+    const it = items[i] || {};
+    const url = String(it.url || '').trim();
+    const label = String(it.label || '').trim();
+    if (url && !url.startsWith(HERO_IMG_PREFIX())) return res.status(400).json({ message: `Invalid picture for slot ${i + 1}` });
+    if (label.length > 40) return res.status(400).json({ message: `Label for slot ${i + 1} can be at most 40 characters` });
+    row[`hero${i + 1}_url`] = url || null;
+    row[`hero${i + 1}_label`] = label || null;
+  }
+  const { data, error } = await admin.from('shop_settings').upsert(row).select('*').single();
+  if (error) return res.status(500).json({ message: 'Could not save. Did you run db/migration-14-hero-images.sql in Supabase?' });
+  clearShopCache();
+  res.json({ ...(await getShop()), ...pick(data) });
 });
 
 // PUT /api/settings/shop  (admin only)

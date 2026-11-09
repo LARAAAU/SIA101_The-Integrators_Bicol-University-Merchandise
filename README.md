@@ -8,7 +8,7 @@ Browser (HTML/Bootstrap/Chart.js)
       |  HTTPS + JWT
 Vercel (static files + Express serverless API)
       |------> Supabase: PostgreSQL, Auth, Storage
-      |------> Maya Checkout (sandbox) or PayMongo: online payment, confirmed by asking the provider
+      |------> Maya Checkout (sandbox): online payment, confirmed by asking the provider
       '------> Resend: email notifications
 ```
 
@@ -17,7 +17,7 @@ Vercel (static files + Express serverless API)
 api/index.js        Express app (Vercel entry point)
 server.js           Local dev server
 routes/             auth, products, orders, payments, users, analytics
-lib/                supabase client, mailer (Resend), payment gateway adapter (Maya / PayMongo)
+lib/                supabase client, mailer (Resend), payment gateway adapter (Maya)
 middleware/auth.js  JWT check + role guards
 db/schema.sql       Tables, indexes, RLS, storage buckets, transactional functions
 public/             Frontend pages
@@ -37,9 +37,8 @@ docs/               Requirements document, setup guide
 | GET /api/settings/payment | user | Merch GCash name and number for manual payments |
 | PUT /api/settings/payment | admin | Update the merch GCash account |
 | GET /api/orders, PATCH /:id/status, /:id/payment | staff | Fulfilment |
-| POST /api/payments/checkout | user | Start online payment (Maya or PayMongo) |
+| POST /api/payments/checkout | user | Start online payment (Maya) |
 | GET /api/payments/verify/:orderId | user/staff | Re-check payment with the provider |
-| POST /api/payments/webhook | PayMongo | Payment confirmation (optional) |
 | GET /api/analytics | staff | Dashboard and chart data |
 | GET/PATCH /api/users | admin | User roles |
 

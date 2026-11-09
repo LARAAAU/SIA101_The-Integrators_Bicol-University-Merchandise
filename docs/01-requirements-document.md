@@ -15,7 +15,7 @@ The system is an **integrated solution** made of four cooperating components:
 | Web frontend | HTML, CSS, JavaScript, Bootstrap, Chart.js | Student shop and admin dashboard |
 | Backend API | Node.js and Express (Vercel serverless) | Business logic, authentication, orchestration |
 | Database, Auth, File storage | Supabase (PostgreSQL, Auth, Storage) | Persistent data, identity, product images and receipts |
-| Payment gateway | Maya Checkout API (sandbox); PayMongo supported as an alternative | Online payment, confirmed by querying the provider |
+| Payment gateway | Maya Checkout API (sandbox) | Online payment, confirmed by querying the provider |
 | Email service | Resend API | Order and payment notifications |
 
 This is an enhancement of the group's earlier IT 112 project (MerchSys), re-architected for integration: new database, new authentication, and three external service integrations.
@@ -128,7 +128,6 @@ This is an enhancement of the group's earlier IT 112 project (MerchSys), re-arch
 ## 7. References
 - Supabase Documentation. https://supabase.com/docs
 - Maya Checkout API Reference and sandbox credentials. https://developers.maya.ph
-- PayMongo API Reference (alternative provider). https://developers.paymongo.com
 - Resend API Documentation. https://resend.com/docs
 - Vercel Documentation (Express on Vercel). https://vercel.com/docs
 - Republic Act No. 10173, Data Privacy Act of 2012.
