@@ -120,7 +120,7 @@ router.post('/forgot', forgotPerIp, forgotPerEmail, async (req, res) => {
   try {
     const base = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
     const { data, error } = await admin.auth.admin.generateLink({
-      type: 'recovery', email, options: { redirectTo: base + '/reset-password.html' },
+      type: 'recovery', email, options: { redirectTo: base + '/resetpassword.html' },
     });
     if (error || !data?.properties?.action_link) {
       console.error('[forgot] no link for', email, '-', error?.message || 'no link returned'); // usually: no account with this email
