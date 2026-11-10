@@ -148,6 +148,15 @@
           <div class="ux-foot"><button class="btn btn-ms" id="heroSave">Save pictures</button></div>
         </form>
 
+        <div class="ux-card mt-3" id="mailCard">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="home"></i></span><div class="grow"><h2>Email delivery</h2><p>Check that order and payment emails can really reach students.</p></div></div>
+          <div class="ux-body">
+            <div id="mailStatus" class="small">Checking...</div>
+            <div id="mailResult" class="mt-3" role="status" aria-live="polite"></div>
+          </div>
+          <div class="ux-foot"><button type="button" class="btn btn-outline-ms" id="mailTest">Send a test email to me</button></div>
+        </div>
+
       </section>
 
       <!-- PICKUP SCHEDULE -->
@@ -708,6 +717,31 @@ async function loadShopForm() {
   try { const sh = await api('/settings/shop'); fillShopForm(sh); fillHeroForm(sh); } catch (e) { fail(e); }
   loadMailStatus();
 }
+
+/* ---------------- Email delivery check ---------------- */
+async function loadMailStatus() {
+  const box = $('mailStatus');
+  try {
+    const s = await api('/settings/email');
+    const row = (label, ok, text) => '<div class="d-flex align-items-start gap-2 py-1"><span class="badge bg-' + (ok ? 'success' : 'danger') + '" style="min-width:64px">' + (ok ? 'OK' : 'Fix') + '</span><div><b>' + label + '</b><div class="muted">' + text + '</div></div></div>';
+    const gmail = s.provider === 'gmail';
+    box.innerHTML =
+      row('Email sender', s.has_key, s.has_key ? (gmail ? 'Sending through Gmail.' : 'Sending through Resend.') : 'Not set. No emails are sent.') +
+      row('Sender address', !s.sandbox_sender, esc(s.from) + (s.sandbox_sender ? '<br>This is Resend\'s test sender. It can only deliver to the Resend account owner.' : '')) +
+      row('Site address for email links', !!s.app_url, s.app_url ? esc(s.app_url) : 'APP_URL is not set, so links inside emails will not work.') +
+      '<div class="mt-2 fw-bold ' + (s.ready ? 'text-success' : '') + '">' + (s.ready ? 'Ready for real students. Send a test email to confirm.' : 'Not ready for real students yet.') + '</div>';
+  } catch (e) { box.textContent = 'Could not check the email settings.'; fail(e); }
+}
+$('mailTest').addEventListener('click', async (e) => {
+  const btn = e.currentTarget, out = $('mailResult');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Sending...'; out.innerHTML = '';
+  try {
+    const r = await api('/settings/email/test', { method: 'POST' });
+    out.innerHTML = '<div class="alert alert-' + (r.ok ? (r.sandbox_sender ? 'warning' : 'success') : 'danger') + ' mb-0 small">' + esc(r.message) +
+      (r.ok && r.sandbox_sender ? '<br><b>Only the Resend account owner can receive this sender\'s emails.</b> Students will not.' : '') +
+      (r.detail ? '<div class="muted mt-1">' + esc(r.detail) + '</div>' : '') + '</div>';
+  } catch (err) { fail(err); } finally { btn.disabled = false; btn.textContent = 'Send a test email to me'; }
+});
 
 $('shopForm').addEventListener('submit', async (e) => {
   e.preventDefault();
