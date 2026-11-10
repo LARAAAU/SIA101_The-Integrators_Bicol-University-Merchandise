@@ -946,3 +946,80 @@ img,svg,video{max-width:100%}
 @media(max-width:360px){
   .hero .hero-art .cd-seg b{font-size:1rem!important}
 }
+
+/* =====================================================================
+   MOBILE TAP SMOOTHNESS (keep this block at the very bottom)
+   ===================================================================== */
+
+/* 1. Remove the ~300ms double-tap-to-zoom wait on everything tappable */
+a, button, .btn, .add, .buy, .cat, .cart-btn, .theme-btn, .acct-btn, .acct-row,
+.ux-nav, .ux-tr, .o-row, .order-card, .pay-opt, .dd-opt, .step, .link-btn,
+.pill-btn, .ghost-btn, .navbar-toggler, .nav-link, tr.clickable,
+input, select, textarea, label, summary {
+  touch-action: manipulation;
+}
+
+/* 2. Replace the grey flash with our own instant press feedback */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* 3. Instant "pressed" response (runs the moment the finger lands) */
+.btn, .add, .cat .ico, .cart-btn, .theme-btn, .acct-btn, .pill-btn, .ghost-btn,
+.ux-nav, .acct-row, .dd-opt, .step, .navbar-toggler {
+  transition: transform .08s ease, background-color .12s ease,
+              border-color .12s ease, box-shadow .12s ease, color .12s ease;
+}
+.btn:active, .add:active, .cart-btn:active, .theme-btn:active, .pill-btn:active,
+.ghost-btn:active, .acct-btn:active {
+  transform: scale(.96);
+}
+.ux-nav:active, .acct-row:active, .dd-opt:active, .ux-tr:active,
+.o-row:active, .order-card:active, tr.clickable:active {
+  background: var(--sky);
+}
+.product:active { transform: scale(.99); }
+
+/* 4. Hover styles only on devices that really hover (stops "sticky" hover after a tap) */
+@media (hover: none) {
+  .add:hover { background: var(--blue); color: #fff; }
+  .btn-ms:hover { background: var(--blue); border-color: var(--blue); }
+  .btn-gold:hover { background: var(--orange); border-color: var(--orange); }
+  .cart-btn:hover { background: var(--blue); color: #fff; }
+  .ux-tr:hover, .ux-table tbody tr:hover, tr.clickable:hover { background: transparent; }
+}
+
+/* 5. Smooth scrolling and no scroll-chaining jank */
+html { -webkit-text-size-adjust: 100%; }
+.cats, .ux-side, .ux-tablewrap, .ann-body, .dd-panel {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.cats, .ux-side { scroll-behavior: smooth; }
+
+/* 6. Phones: shorten animations so nothing feels like it is "waiting" */
+@media (max-width: 767px) {
+  .dropdown-menu.show { animation-duration: .12s; }
+  .dropdown-menu.dd-closing { animation-duration: .09s; }
+  .dd-panel { animation-duration: .12s; }
+  .dd-panel.closing { animation-duration: .09s; }
+  .page-skel { transition-duration: .12s; }
+  .sk-cover { animation-duration: .1s; }
+  .ann-card, .ann-overlay { animation-duration: .15s; }
+  .modal.fade .modal-dialog { transition-duration: .15s; }
+  .modal-backdrop.fade { transition-duration: .1s; }
+}
+
+/* 7. Inputs: 16px stops iOS from zooming in (and lagging) when you tap a field */
+@media (max-width: 767px) {
+  input, select, textarea,
+  .pill, .form-control, .form-select,
+  .ux-in input, .ux-in select, .rw input, .rw select, .fld input, .fld select {
+    font-size: 16px;
+  }
+}
+
+/* 8. Make small tap targets easier to hit (fewer missed taps feel like lag) */
+@media (pointer: coarse) {
+  .navbar-toggler { min-width: 44px; min-height: 44px; }
+  .ux-seg button { min-height: 36px; }
+  .link-btn { padding: .35rem 0; }
+}

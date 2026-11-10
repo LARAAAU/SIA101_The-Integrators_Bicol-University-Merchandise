@@ -2,7 +2,17 @@
 <script src="/js/theme.js"></script><script src="/js/loader.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Cart</title></head><body>
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Cart</title>
+<style>
+.size-pills{display:flex; flex-wrap:wrap; gap:6px}
+.size-pills button{min-width:46px; padding:5px 12px; border-radius:999px; font-weight:700; font-size:.82rem; border:1px solid var(--line); background:transparent; color:var(--ink)}
+.size-pills button.on{background:var(--link); border-color:var(--link); color:#fff}
+.cart-line.need{outline:2px solid #f59e0b; outline-offset:4px; border-radius:12px}
+.cart-meta{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.8rem}
+.cart-meta b{color:var(--ink)}
+.ck-sum{border-top:1px dashed var(--line); margin-top:14px; padding-top:12px}
+.ck-sum .r{display:flex; justify-content:space-between; gap:12px; padding:3px 0; font-size:.9rem}
+</style></head><body>
 <div id="nav"></div>
 <main class="container pb-5">
   <h2 class="mb-3">Your cart</h2>
@@ -20,7 +30,8 @@
           <div id="gcashInfo" class="d-none"></div>
       <label class="pay-opt"><input type="radio" name="pm" value="onsite" class="form-check-input me-2"><b>Pay onsite</b><div class="muted small ms-4">Pay in cash when you pick up your order.</div></label>
         </div>
-        <div class="d-flex justify-content-between align-items-center mb-3"><span>Total</span><span class="display-num fs-3 fw-bold" id="total"></span></div>
+        <div class="ck-sum" id="summary"></div>
+        <div class="d-flex justify-content-between align-items-center my-3"><span>Total</span><span class="display-num fs-3 fw-bold" id="total"></span></div>
         <button class="btn btn-gold w-100 btn-lg" id="placeBtn">Place order</button>
       </div>
     </div>
@@ -28,9 +39,27 @@
 </main>
 <div id="footer"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/js/app.js"></script><script src="/js/select.js"></script>
+<script src="/js/app.js"></script><script src="/js/select.js"></script><script src="/js/size-config.js"></script>
 <script>
 renderNav('cart'); renderFooter();
+
+// ===== Sizes =====
+// Works with /js/size-config.js, and with these defaults if that file is missing.
+const NAME_RULE = /hoodie|shirt|\btee|sleeve|jersey|polo|jacket/i;
+const CFG = (typeof SIZE_CONFIG !== 'undefined') ? SIZE_CONFIG : {};
+const needsSize = (p) => CFG.needsSize ? CFG.needsSize(p) : (p.category === 'Clothes' || NAME_RULE.test(p.name || ''));
+const sizesOf = (p) => CFG.sizesOf ? CFG.sizesOf(p) : ['S', 'M', 'L', 'XL', '2XL'];
+// The size picked for each cart item is remembered here (keyed by product id), so it survives page reloads
+const SIZE_KEY = 'ms_cart_sizes';
+const sizeMap = () => { try { return store.get(SIZE_KEY) || {}; } catch { return {}; } };
+const setSize = (id, s) => { const m = sizeMap(); m[id] = s; try { store.set(SIZE_KEY, m); } catch {} };
+// the size of a cart line: the one stored on the item itself, otherwise the one remembered from the shop page
+const sizeOf = (i) => {
+  const s = String(i.size || sizeMap()[i.id] || '').toUpperCase();
+  return needsSize(i) && sizesOf(i).includes(s) ? s : null;
+};
+
+const openSz = new Set();   // cart lines whose size buttons are open (tap the size to change it)
 let campuses = [];
 (async () => {
   try {
@@ -46,18 +75,39 @@ function showNote() {
     : 'Choose the college or campus where you want to pick up your order. Some orders may be picked up at the Main Campus; we will email you if that applies.';
 }
 campus.addEventListener('change', () => { store.set('ms_campus', campus.value); showNote(); });
+
 function draw() {
   const c = Cart.get();
   document.getElementById('checkout').style.display = c.length ? '' : 'none';
-  document.getElementById('items').innerHTML = c.length ? c.map((i) =>
-    '<div class="d-flex flex-wrap align-items-center gap-2 gap-sm-3 py-2 border-bottom"><div class="flex-grow-1" style="flex:1 1 150px;min-width:0"><div class="fw-bold">' + esc(i.name) + '</div><div class="muted small">' + peso(i.price) + ' each</div></div>' +
-    '<div class="btn-group btn-group-sm"><button class="btn btn-outline-ms" data-a="dec" data-id="' + i.id + '" aria-label="Decrease quantity of ' + esc(i.name) + '">-</button><span class="btn disabled qty-n">' + i.qty + '</span><button class="btn btn-outline-ms" data-a="inc" data-id="' + i.id + '" aria-label="Increase quantity of ' + esc(i.name) + '">+</button></div>' +
-    '<div class="fw-bold" style="min-width:90px;text-align:right">' + peso(i.price * i.qty) + '</div>' +
-    '<button class="btn btn-sm btn-link text-danger" data-a="rm" data-id="' + i.id + '">Remove</button></div>').join('')
+  document.getElementById('items').innerHTML = c.length ? c.map((i) => {
+    const sized = needsSize(i), sz = sizeOf(i);
+    return '<div class="cart-line d-flex flex-wrap align-items-center gap-2 gap-sm-3 py-3 border-bottom" data-line="' + i.id + '">' +
+      '<div class="flex-grow-1" style="flex:1 1 150px;min-width:0"><div class="fw-bold">' + esc(i.name) + (sized && sz ? ' <span class="badge text-bg-primary align-middle">' + esc(sz) + '</span>' : '') + '</div>' +
+      '<div class="muted small">' + peso(i.price) + ' each</div></div>' +
+      '<div class="btn-group btn-group-sm"><button class="btn btn-outline-ms" data-a="dec" data-id="' + i.id + '" aria-label="Decrease quantity of ' + esc(i.name) + '">-</button><span class="btn disabled qty-n">' + i.qty + '</span><button class="btn btn-outline-ms" data-a="inc" data-id="' + i.id + '" aria-label="Increase quantity of ' + esc(i.name) + '">+</button></div>' +
+      '<div class="fw-bold" style="min-width:90px;text-align:right">' + peso(i.price * i.qty) + '</div>' +
+      '<button class="btn btn-sm btn-link text-danger" data-a="rm" data-id="' + i.id + '">Remove</button>' +
+      // details row: size, quantity, subtotal + size buttons
+      '<div class="w-100 cart-meta muted">' +
+        (sized ? '<button type="button" class="btn btn-sm btn-outline-ms py-0" data-toggle="' + i.id + '" aria-expanded="' + (!sz || openSz.has(i.id)) + '">Size: <b>' + (sz ? esc(sz) : '<span class="text-warning">choose</span>') + '</b> &middot; ' + (sz && openSz.has(i.id) ? 'Close' : 'Change') + '</button>' : '') +
+        '<span>Quantity: <b>' + i.qty + '</b></span><span>Subtotal: <b>' + peso(i.price * i.qty) + '</b></span></div>' +
+      (sized && (!sz || openSz.has(i.id)) ? '<div class="w-100"><div class="size-pills" role="radiogroup" aria-label="Size for ' + esc(i.name) + '">' +
+        sizesOf(i).map((s) => '<button type="button" role="radio" aria-checked="' + (s === sz) + '" class="' + (s === sz ? 'on' : '') + '" data-size="' + esc(s) + '" data-id="' + i.id + '">' + esc(s) + '</button>').join('') + '</div></div>' : '') +
+      '</div>';
+  }).join('')
     : '<div class="text-center muted py-4">Your cart is empty. <a href="/index.html">Browse the shop</a></div>';
+  document.getElementById('summary').innerHTML = c.length ? '<div class="fw-bold mb-1">Order summary</div>' + c.map((i) => {
+    const sz = sizeOf(i);
+    return '<div class="r"><span>' + esc(i.name) + (needsSize(i) ? ' (' + (sz ? esc(sz) : '<span class="text-warning">size?</span>') + ')' : '') + ' x ' + i.qty + '</span><span>' + peso(i.price * i.qty) + '</span></div>';
+  }).join('') : '';
   document.getElementById('total').textContent = peso(Cart.total());
 }
+
 document.getElementById('items').addEventListener('click', (e) => {
+  const sb = e.target.closest('button[data-size]');
+  const tg = e.target.closest('button[data-toggle]');
+  if (tg) { const id = tg.dataset.toggle; openSz.has(id) ? openSz.delete(id) : openSz.add(id); draw(); return; }
+  if (sb) { setSize(sb.dataset.id, sb.dataset.size); openSz.delete(sb.dataset.id); draw(); return; }
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const it = Cart.get().find((i) => i.id === b.dataset.id);
   if (b.dataset.a === 'inc') { if (it.qty >= it.stock) toast('No more stock available', 'warning'); else Cart.setQty(it.id, it.qty + 1); }
@@ -65,15 +115,30 @@ document.getElementById('items').addEventListener('click', (e) => {
   if (b.dataset.a === 'rm') Cart.setQty(it.id, 0);
   draw();
 });
+
 document.getElementById('placeBtn').addEventListener('click', async (e) => {
   if (!requireLogin()) return;
+  const cart = Cart.get();
+  // every item that needs a size must have one
+  document.querySelectorAll('.cart-line.need').forEach((x) => x.classList.remove('need'));
+  const missing = cart.find((i) => needsSize(i) && !sizeOf(i));
+  if (missing) {
+    const row = document.querySelector('[data-line="' + missing.id + '"]');
+    if (row) { row.classList.add('need'); row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    toast('Please choose a size for ' + missing.name, 'warning'); return;
+  }
   if (!campus.value) { toast('Please choose a pickup campus', 'warning'); campus.focus(); return; }
   const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Placing order...';
   const method = document.querySelector('input[name=pm]:checked').value;
   let order;
   try {
-    order = await api('/orders', { method: 'POST', body: { payment_method: method, campus_id: campus.value, items: Cart.get().map((i) => ({ product_id: i.id, quantity: i.qty })) } });
+    order = await api('/orders', { method: 'POST', body: { payment_method: method, campus_id: campus.value, items: cart.map((i) => {
+      const line = { product_id: i.id, quantity: i.qty };
+      if (needsSize(i)) line.size = sizeOf(i);   // the size is sent with each item
+      return line;
+    }) } });
     Cart.clear();
+    try { store.set(SIZE_KEY, {}); } catch {}
   } catch (err) { fail(err); btn.disabled = false; btn.textContent = 'Place order'; return; }
   try {
     if (method === 'gcash_online') { const r = await api('/payments/checkout', { method: 'POST', body: { order_id: order.id } }); location.href = r.checkout_url; return; }

@@ -386,6 +386,7 @@ document.getElementById('grid').addEventListener('click', (e) => {
   const id = add?.dataset.id || buy?.dataset.buy; if (!id) return;
   const p = byId(id); if (!p) return;
   const go = (size) => {
+    if (size && add) { const m = store.get('ms_cart_sizes') || {}; m[p.id] = size; store.set('ms_cart_sizes', m); }   // the cart shows this size, no need to pick again
     if (add) Cart.add(size ? { ...p, size } : p)
       ? toast(p.name + (size ? ' (' + size + ')' : '') + ' added to cart', 'success')
       : toast('You already have all the available stock in your cart', 'warning');
