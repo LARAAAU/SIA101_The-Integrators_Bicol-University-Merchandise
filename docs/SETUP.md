@@ -51,6 +51,7 @@ Maya publishes **public sandbox keys** for testing, so you can use those.
 1. Sign up at resend.com, create an API key, put it in `RESEND_API_KEY`.
 2. Without a verified domain, Resend only delivers to the email you signed up with. Use that email for your demo account, or verify a domain.
 3. If the key is empty, the app still works and logs "mail skipped".
+4. No domain? Send through Gmail instead: turn on 2-Step Verification for the sender Gmail, create an App Password, then set `GMAIL_USER` (the Gmail address) and `GMAIL_APP_PASSWORD` (the 16 letters). When both are set, Gmail is used and Resend is ignored. Gmail allows about 500 emails per day.
 
 ## 6. New GitHub repository
 ```bash
@@ -95,9 +96,9 @@ The old MerchSys repo contained a `.env` with the MongoDB connection string. Cha
 This code was written without internet access, so it has not been run against live Supabase, Maya, or Resend. Test each flow in test mode.
 
 ## Submission file names (IT 118 format: SIA101_GroupName_ProjectTitle)
-Replace `GroupName` with your actual group name (no spaces).
-- Documentation (all documents combined, PDF): `SIA101_GroupName_MerchSys.pdf`
-- Source code (ZIP, without `node_modules` and `.env`): `SIA101_GroupName_MerchSys.zip`
+Group name: **The Integrators**. Project title: **Bicol University Merchandise**.
+- Documentation (all documents combined, PDF): `SIA101_The Integrators_Bicol University Merchandise.pdf`
+- Source code (ZIP, without `node_modules` and `.env`): `SIA101_The Integrators_Bicol University Merchandise.zip`
 
 ## Security check: Row Level Security (run once, and again before the demo)
 1. Supabase > SQL Editor: run `db/migration-12-rls-hardening.sql`.
