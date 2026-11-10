@@ -1,4 +1,4 @@
--- MerchSys RLS audit (checklist item 90). READ-ONLY: it changes nothing.
+-- BU Merch RLS audit (checklist item 90). READ-ONLY: it changes nothing.
 -- Run it in Supabase Dashboard > SQL Editor > New query, before AND after db/migration-12-rls-hardening.sql.
 -- Read the result table from the top: the first row is the SUMMARY. Every row should be PASS.
 --   FAIL   = a real exposure, fix it (the detail column says how)
@@ -71,7 +71,7 @@ checks as (
   from storage.buckets b
   union all
   select 8, 'Storage policies (storage.objects)', 'policy ' || policyname, 'REVIEW',
-         'roles: ' || array_to_string(roles, ',') || ' | command: ' || cmd || '. MerchSys uploads only through the server, so none are needed'
+         'roles: ' || array_to_string(roles, ',') || ' | command: ' || cmd || '. BU Merch uploads only through the server, so none are needed'
   from pg_policies where schemaname = 'storage'
   union all
   select 8, 'Storage policies (storage.objects)', 'none found', 'PASS',

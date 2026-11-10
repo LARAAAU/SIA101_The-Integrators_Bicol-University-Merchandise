@@ -1,4 +1,4 @@
-# MerchSys
+# BU Merch
 **Requirements Document (RDR)** | _University Merchandise Pre-Order System_
 Course: IT 118 Systems Integration and Architecture 1 | Program: BSIT, 3rd Year
 Group: [Group Name] | Members: [Names and roles] | Date: [Date]
@@ -6,7 +6,7 @@ Group: [Group Name] | Members: [Names and roles] | Date: [Date]
 ---
 
 ## 1. Introduction
-MerchSys is a web-based system where students pre-order official university merchandise (hoodies, shirts, lanyards, etc.), pay online (or through GCash), and track their orders, while staff and administrators manage products, payments, and releases.
+BU Merch is a web-based system where students pre-order official university merchandise (hoodies, shirts, lanyards, etc.), pay online (or through GCash), and track their orders, while staff and administrators manage products, payments, and releases.
 
 The system is an **integrated solution** made of four cooperating components:
 
@@ -18,7 +18,7 @@ The system is an **integrated solution** made of four cooperating components:
 | Payment gateway | Maya Checkout API (sandbox) | Online payment, confirmed by querying the provider |
 | Email service | Resend API | Order and payment notifications |
 
-This is an enhancement of the group's earlier IT 112 project (MerchSys), re-architected for integration: new database, new authentication, and three external service integrations.
+This is an enhancement of the group's earlier IT 112 project (BU Merch), re-architected for integration: new database, new authentication, and three external service integrations.
 
 ## 2. Project Objectives
 1. Centralize university merchandise pre-ordering in one system.

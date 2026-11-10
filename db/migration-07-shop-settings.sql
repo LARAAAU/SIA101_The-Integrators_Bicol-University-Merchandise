@@ -1,4 +1,4 @@
--- MerchSys migration 07: shop open/closed and maintenance mode
+-- BU Merch migration 07: shop open/closed and maintenance mode
 -- Run in Supabase SQL Editor. Safe to run more than once.
 -- The admin controls these in Admin > Shop status.
 create table if not exists public.shop_settings (

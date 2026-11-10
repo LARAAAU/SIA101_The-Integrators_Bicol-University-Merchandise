@@ -1,8 +1,8 @@
 {
-  "name": "merchsys",
+  "name": "BU Merch",
   "version": "2.0.0",
   "private": true,
-  "description": "MerchSys - University Merchandise Pre-Order System (Systems Integration edition)",
+  "description": "BU Merch - University Merchandise Pre-Order System (Systems Integration edition)",
   "main": "server.js",
   "scripts": {
     "dev": "node --watch server.js",

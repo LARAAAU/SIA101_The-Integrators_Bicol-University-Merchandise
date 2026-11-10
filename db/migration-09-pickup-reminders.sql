@@ -1,4 +1,4 @@
--- MerchSys migration 09: scheduled order pickup reminders
+-- BU Merch migration 09: scheduled order pickup reminders
 -- Run in Supabase SQL Editor. Safe to run more than once.
 -- Remembers how many pickup reminders an order already got (so students are never emailed twice
 -- for the same thing) and lets the order history show "Pickup reminder emailed".

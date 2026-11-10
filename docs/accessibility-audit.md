@@ -1,4 +1,4 @@
-# Accessibility audit (WCAG 2.1 AA) - MerchSys
+# Accessibility audit (WCAG 2.1 AA) - BU Merch
 
 Scope: all pages in `public/` (student pages and admin), light and dark theme.
 

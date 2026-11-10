@@ -1,4 +1,4 @@
--- MerchSys migration 04: real BU colleges/campuses as pickup locations + middle name
+-- BU Merch migration 04: real BU colleges/campuses as pickup locations + middle name
 -- Run AFTER migration-02 and 03. Safe to run more than once.
 
 -- 1. Names split into parts (full_name is still kept for display)

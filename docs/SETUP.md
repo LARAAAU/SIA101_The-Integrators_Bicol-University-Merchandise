@@ -1,4 +1,4 @@
-# MerchSys v2: Setup Guide (kayo ang gagawa nito)
+# BU Merch v2: Setup Guide (kayo ang gagawa nito)
 
 ## 1. Supabase (database, auth, storage)
 1. Sign up at supabase.com, **New project**. Region: **Southeast Asia (Singapore)**. Save the database password.
@@ -57,9 +57,9 @@ Maya publishes **public sandbox keys** for testing, so you can use those.
 ```bash
 git init
 git add .
-git commit -m "Initial commit: MerchSys v2"
+git commit -m "Initial commit: BU Merch v2"
 git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/sia-merchsys.git
+git remote add origin https://github.com/YOUR-USERNAME/sia-BU Merch.git
 git push -u origin main
 ```
 Check `git status` first: `.env` must NOT be listed (it is in `.gitignore`).
@@ -90,7 +90,7 @@ Secrets are the keys and passwords in `.env`: the Supabase `service_role` key, `
 
 Maya sandbox keys in `.env.example` are Maya's public demo keys (published in their docs), not private.
 
-The old MerchSys repo contained a `.env` with the MongoDB connection string. Change that database password or delete the old cluster.
+The old BU Merch repo contained a `.env` with the MongoDB connection string. Change that database password or delete the old cluster.
 
 ## Not verified yet
 This code was written without internet access, so it has not been run against live Supabase, Maya, or Resend. Test each flow in test mode.

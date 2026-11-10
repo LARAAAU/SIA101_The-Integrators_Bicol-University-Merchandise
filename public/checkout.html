@@ -53,7 +53,7 @@ let campuses = [], product = null, qty = 1, size = (qs.get('size') || '').toUppe
 // Sizes (uses /js/size-config.js; works with these defaults if that file is missing)
 const NAME_RULE = /hoodie|shirt|\btee|sleeve|jersey|polo|jacket/i;
 const CFG = (typeof SIZE_CONFIG !== 'undefined') ? SIZE_CONFIG : {};
-const needsSize = (p) => (CFG.needsSize ? CFG.needsSize(p) : p.category === 'Clothes') || NAME_RULE.test(p.name || '');
+const needsSize = (p) => CFG.needsSize ? CFG.needsSize(p) : (p.category === 'Clothes' || NAME_RULE.test(p.name || ''));   // the admin's sizes (Admin > Products) decide
 const sizesOf = (p) => CFG.sizesOf ? CFG.sizesOf(p) : ['S', 'M', 'L', 'XL', '2XL'];
 
 if (requireLogin()) init();

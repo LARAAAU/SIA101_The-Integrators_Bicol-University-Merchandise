@@ -282,7 +282,7 @@ const imgOf = (p) => p.image_url || IMAGES[p.name] || '';
 const NAME_RULE = /hoodie|shirt|\btee|sleeve|jersey|polo|jacket/i;   // hoodies/shirts saved under any category
 const FALLBACK_TABLE = { head: ['Size', 'Width (cm)', 'Height (cm)'], rows: [['S', 47, 65], ['M', 50, 68], ['L', 53, 71], ['XL', 56, 74], ['2XL', 59, 77]] };
 const CFG = (typeof SIZE_CONFIG !== 'undefined') ? SIZE_CONFIG : {};
-const needsSize = (p) => (CFG.needsSize ? CFG.needsSize(p) : p.category === 'Clothes') || NAME_RULE.test(p.name || '');
+const needsSize = (p) => CFG.needsSize ? CFG.needsSize(p) : (p.category === 'Clothes' || NAME_RULE.test(p.name || ''));   // the admin's sizes (Admin > Products) decide
 const sizesOf = (p) => CFG.sizesOf ? CFG.sizesOf(p) : ['S', 'M', 'L', 'XL', '2XL'];
 const chartOf = (p) => CFG.chartOf ? CFG.chartOf(p) : '/img/size-chart.jpg';
 const tableOf = (p) => CFG.tableOf ? CFG.tableOf(p) : FALLBACK_TABLE;
@@ -347,7 +347,7 @@ function openChart(p) {
   // The built-in table is always ready; the picture replaces it only when it loads
   tb.innerHTML = '<table class="table align-middle text-center mb-0" style="--bs-table-bg:transparent;--bs-table-color:var(--ink)"><thead><tr>' +
     t.head.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
-    t.rows.map((r) => '<tr>' + r.map((v, i) => i ? '<td>' + esc(String(v)) + '</td>' : '<th>' + esc(String(v)) + '</th>').join('') + '</tr>').join('') +
+    (t.rows.filter((r) => sizesOf(p).includes(String(r[0]))).length ? t.rows.filter((r) => sizesOf(p).includes(String(r[0]))) : t.rows).map((r) => '<tr>' + r.map((v, i) => i ? '<td>' + esc(String(v)) + '</td>' : '<th>' + esc(String(v)) + '</th>').join('') + '</tr>').join('') +
     '</tbody></table><div class="muted small mt-2">Measurements are in centimeters. Choose the size closest to your own measurements.</div>';
   tb.style.display = ''; im.style.display = 'none';
   im.onload = () => { im.style.display = 'block'; tb.style.display = 'none'; };

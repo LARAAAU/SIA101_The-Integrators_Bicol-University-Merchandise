@@ -1,4 +1,4 @@
--- MerchSys migration 13: pin the search_path of the app's database functions
+-- BU Merch migration 13: pin the search_path of the app's database functions
 -- Fixes the Supabase Security Advisor warning "Function Search Path Mutable"
 -- (create_order, cancel_order, dashboard_stats). Safe to run more than once.
 -- Run in: Supabase Dashboard > SQL Editor > New query. It does not change what the functions do:

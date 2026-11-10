@@ -1,7 +1,7 @@
--- MerchSys migration 12: Row Level Security hardening  (checklist item 90)
+-- BU Merch migration 12: Row Level Security hardening  (checklist item 90)
 --
 -- WHY
---   Every database call in MerchSys is made by the Express server with the SERVICE-ROLE key.
+--   Every database call in BU Merch is made by the Express server with the SERVICE-ROLE key.
 --   That key skips RLS on purpose. The browser never talks to the database directly, so the public
 --   (anon) and logged-in (authenticated) Data API roles need NO access to anything in the public schema.
 --   Supabase gives those roles broad grants by default, and the only thing stopping them is RLS.

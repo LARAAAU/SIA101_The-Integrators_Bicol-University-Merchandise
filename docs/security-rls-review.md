@@ -1,7 +1,7 @@
 # Security Review: Supabase Row Level Security (RLS)
-Checklist item 90 | MerchSys | Reviewed against the latest project ZIP
+Checklist item 90 | BU Merch | Reviewed against the latest project ZIP
 
-## 1. How MerchSys uses the database (why this matters)
+## 1. How BU Merch uses the database (why this matters)
 ```
 Browser  ->  Express API (checks login + role)  ->  Supabase (service-role key)
                                      \-> the anon key is used ONLY for Supabase Auth (sign in / refresh), never for tables
@@ -67,7 +67,7 @@ This could not be run from the code alone, because it depends on the live projec
 - The `permission denied ... GRANT SELECT ... TO anon` hint that Supabase prints in the error is only a generic suggestion. Do NOT run it, it would undo migration 12.
 
 ## 6. Test log
-Project: SIA101_The Integrators_MerchSys (Supabase, region of the project dashboard). Tester: Queen Lara Bias. All tests run on 11/8/2026.
+Project: SIA101_The Integrators_BU Merch (Supabase, region of the project dashboard). Tester: Queen Lara Bias. All tests run on 11/8/2026.
 
 | # | Test | Expected | Actual | Pass/Fail | Date | Tester |
 |---|---|---|---|---|---|---|

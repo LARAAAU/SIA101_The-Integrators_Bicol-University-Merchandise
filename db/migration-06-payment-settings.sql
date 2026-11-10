@@ -1,4 +1,4 @@
--- MerchSys migration 06: editable GCash account for manual payments
+-- BU Merch migration 06: editable GCash account for manual payments
 -- Run in Supabase SQL Editor. Safe to run more than once.
 -- The admin edits these values in Admin > Payment settings.
 create table if not exists public.payment_settings (

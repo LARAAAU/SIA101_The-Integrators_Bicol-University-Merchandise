@@ -1,4 +1,4 @@
--- MerchSys migration 08: order status timeline (who changed what, and when)
+-- BU Merch migration 08: order status timeline (who changed what, and when)
 -- Run in Supabase SQL Editor. Safe to run more than once.
 -- Every order gets a history: placed, each status change, payment updates and receipt uploads,
 -- together with the person (student, staff, admin) or the system that did it.

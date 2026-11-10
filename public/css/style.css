@@ -446,13 +446,15 @@ textarea.form-control{min-height:0}
 .maint-btn:disabled{background:var(--blue);border-color:var(--blue);color:#fff;opacity:.8}
 
 /* announcement popup */
-.ann-overlay{position:fixed;inset:0;z-index:2500;background:rgba(10,30,45,.6);display:flex;align-items:center;justify-content:center;padding:1rem;animation:annFade .2s ease}
-.ann-card{width:100%;max-width:480px;max-height:92vh;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(10,30,45,.35);animation:annPop .25s ease}
+.ann-overlay{position:fixed;inset:0;z-index:2500;background:rgba(10,30,45,.6);overflow:hidden;overscroll-behavior:contain;touch-action:none;animation:annFade .2s ease}
+/* The frame is as tall as the SMALL viewport (svh), which does not change when a phone's address bar slides in or out, so the card never moves. */
+.ann-frame{box-sizing:border-box;height:100vh;height:100svh;width:100%;display:flex;align-items:center;justify-content:center;padding:1rem}
+.ann-card{width:100%;max-width:480px;max-height:92vh;max-height:calc(100svh - 2rem);display:flex;flex-direction:column;background:var(--paper);color:var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(10,30,45,.35);animation:annPop .25s ease;touch-action:auto}
 .ann-head{display:flex;align-items:center;justify-content:space-between;background:var(--deep);color:#fff;padding:.8rem 1.1rem}
 .ann-head .brand{color:#fff;font-size:1.15rem}
 .ann-x{border:0;background:none;color:#fff;font-size:1.9rem;line-height:1;cursor:pointer;padding:0 .3rem;opacity:.85}
 .ann-x:hover{opacity:1}
-.ann-body{padding:1rem;overflow:auto}
+.ann-body{padding:1rem;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .ann-img{display:block;width:100%;height:auto;border-radius:10px}
 .ann-text{white-space:pre-line;overflow-wrap:anywhere;margin:0;line-height:1.55}
 .ann-img + .ann-text{margin-top:.9rem}

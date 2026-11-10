@@ -1,4 +1,4 @@
--- MerchSys migration 02: campuses (pickup locations), product categories, "shipped" status
+-- BU Merch migration 02: campuses (pickup locations), product categories, "shipped" status
 -- Run in Supabase SQL Editor AFTER schema.sql. Safe to run more than once.
 
 -- 1. Campuses

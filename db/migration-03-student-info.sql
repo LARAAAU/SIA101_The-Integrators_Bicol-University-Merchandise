@@ -1,4 +1,4 @@
--- MerchSys migration 03: student info collected at sign up
+-- BU Merch migration 03: student info collected at sign up
 -- Run in Supabase SQL Editor AFTER migration-02. Safe to run more than once.
 
 alter table public.profiles add column if not exists student_id text;

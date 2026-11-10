@@ -1,4 +1,4 @@
-# MerchSys
+# BU Merch
 University Merchandise Pre-Order System | IT 118 Systems Integration and Architecture 1 (BSIT 3rd Year)
 Students pre-order merchandise and pay via GCash; staff manage orders; admins see analytics.
 

@@ -7,7 +7,7 @@ const app = require('./api/index');
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`MerchSys running at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`BU Merch running at http://localhost:${PORT}`));
 
 // Pickup reminders: on Vercel the daily cron in vercel.json does this; on a normal server, check every 6 hours.
 const { runPickupReminders } = require('./lib/pickupReminders');

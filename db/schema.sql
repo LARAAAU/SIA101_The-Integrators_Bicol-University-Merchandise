@@ -1,4 +1,4 @@
--- MerchSys v2 - Supabase (PostgreSQL) schema
+-- BU Merch - Supabase (PostgreSQL) schema
 -- Run this whole file once in: Supabase Dashboard > SQL Editor > New query
 
 create extension if not exists "pgcrypto";

@@ -2,7 +2,7 @@
 <script src="/js/theme.js"></script><script src="/js/loader.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="/css/style.css" rel="stylesheet"><title>MerchSys - Admin</title></head><body>
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Admin</title></head><body>
 <div id="nav"></div>
 <main class="container pb-5">
   <div class="ux-crumb">Admin / <b id="crumb">Dashboard</b></div>
@@ -94,6 +94,12 @@
 
       <style>
 /* Homepage pictures card */
+.size-opts{display:flex;flex-wrap:wrap;gap:.45rem}
+.size-opt{position:relative;margin:0;cursor:pointer}
+.size-opt input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.size-opt span{display:inline-block;min-width:3rem;text-align:center;padding:.4rem .85rem;border:1px solid var(--line-in);border-radius:999px;font-weight:700;background:transparent;color:var(--ink);transition:background .12s,border-color .12s}
+.size-opt input:checked + span{background:var(--link);border-color:var(--link);color:#fff}
+.size-opt input:focus-visible + span{outline:2px solid var(--link);outline-offset:2px}
 .hero-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
 @media (max-width:767px){.hero-slots{grid-template-columns:1fr}}
 .hslot{border:1px solid var(--line);border-radius:16px;padding:.9rem;background:var(--surface);display:flex;flex-direction:column;gap:.7rem}
@@ -237,6 +243,11 @@
     <div class="mb-2"><label class="form-label" for="pName">Name</label><input id="pName" class="form-control" required></div>
     <div class="mb-2"><label class="form-label" for="pCat">Category</label><select id="pCat" class="form-select"><option>Clothes</option><option>Bags</option><option>Caps</option><option>Pins</option><option>Others</option></select></div>
     <div class="mb-2"><label class="form-label" for="pDesc">Description</label><textarea id="pDesc" class="form-control" rows="2"></textarea></div>
+    <div class="mb-2" id="pSizeBox">
+      <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" role="switch" id="pSized"><label class="form-check-label fw-bold" for="pSized">This item comes in sizes</label></div>
+      <div id="pSizeList" class="size-opts" role="group" aria-label="Available sizes"></div>
+      <div class="form-text" id="pSizeHint">Students can only choose the sizes you tick here.</div>
+    </div>
     <div class="row g-2 mb-2">
       <div class="col-4"><label class="form-label" for="pPrice">Price (PHP)</label><input id="pPrice" type="number" min="0" step="0.01" class="form-control" required></div>
       <div class="col-4"><label class="form-label" for="pStock">Stock</label><input id="pStock" type="number" min="0" step="1" class="form-control" required></div>
@@ -250,7 +261,7 @@
 </form></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/js/app.js"></script><script src="/js/select.js"></script>
+<script src="/js/app.js"></script><script src="/js/select.js"></script><script src="/js/size-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 renderNav('admin'); hydrateIcons();
@@ -577,16 +588,37 @@ async function loadProducts(page) {
     products = d.rows; renderPager($('prodPager'), d, loadProducts);
     $('prodRows').innerHTML = products.length ? products.map((p) =>
       '<tr class="' + (p.is_active ? '' : 'muted') + '"><td>' + (p.image_url ? '<img class="thumb" src="' + esc(p.image_url) + '" alt="">' : '<div class="thumb d-flex align-items-center justify-content-center fw-bold">' + esc(p.name.charAt(0)) + '</div>') + '</td>' +
-      '<td class="fw-bold">' + esc(p.name) + '<div class="muted small fw-normal">' + esc(p.category) + '</div>' + (p.is_active ? '' : ' <span class="badge bg-secondary">Hidden</span>') + '</td><td>' + peso(p.price) + '</td>' +
+      '<td class="fw-bold">' + esc(p.name) + '<div class="muted small fw-normal">' + esc(p.category) + sizeText(p) + '</div>' + (p.is_active ? '' : ' <span class="badge bg-secondary">Hidden</span>') + '</td><td>' + peso(p.price) + '</td>' +
       '<td>' + p.stock + (p.stock <= p.low_stock_threshold ? ' <span class="badge bg-warning text-dark">Low</span>' : '') + '</td><td>' + fmtDate(p.preorder_deadline) + '</td>' +
       '<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-ms" data-a="edit" data-id="' + p.id + '" aria-label="Edit ' + esc(p.name) + '">Edit</button> ' +
       (p.is_active ? '<button class="btn btn-sm btn-outline-danger" data-a="hide" data-id="' + p.id + '" aria-label="Hide ' + esc(p.name) + '">Hide</button>' : '') + '</td></tr>').join('')
       : '<tr><td colspan="6" class="text-center muted py-4">' + ($('pQ').value.trim() ? 'No products match your search.' : 'No products yet. Click "Add product" to create one.') + '</td></tr>';
   } catch (e) { fail(e); }
 }
+// Sizes shown under the product name, e.g. " · Sizes: S, M, L"
+const sizeText = (p) => (typeof SIZE_CONFIG !== 'undefined' && SIZE_CONFIG.needsSize(p) ? ' · Sizes: ' + esc(SIZE_CONFIG.sizesOf(p).join(', ')) : '');
 let pqTimer; $('pQ').addEventListener('input', () => { clearTimeout(pqTimer); pqTimer = setTimeout(() => loadProducts(1), 350); });
 const prodModal = new bootstrap.Modal($('prodModal'));
 let editingId = null;
+/* Sizes: the admin ticks which sizes a product comes in. Saved on the product, so students only see these. */
+const ALL_SIZES = (typeof SIZE_CONFIG !== 'undefined' && SIZE_CONFIG.allSizes) || ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+const DEFAULT_SIZES = (typeof SIZE_CONFIG !== 'undefined' && SIZE_CONFIG.defaultSizes) || ['S', 'M', 'L', 'XL', '2XL'];
+let sizeTouched = false;
+const effectiveSizes = (p) => (typeof SIZE_CONFIG !== 'undefined' && SIZE_CONFIG.needsSize(p) ? SIZE_CONFIG.sizesOf(p) : []);   // what students see now, even if never edited
+const sizesForCategory = (cat) => (cat === 'Clothes' ? DEFAULT_SIZES.slice() : []);
+function setSizeUI(list) {
+  $('pSized').checked = list.length > 0;
+  $('pSizeList').innerHTML = ALL_SIZES.map((s) => '<label class="size-opt"><input type="checkbox" value="' + s + '"' + (list.includes(s) ? ' checked' : '') + '><span>' + s + '</span></label>').join('');
+  $('pSizeList').classList.toggle('d-none', !list.length);
+}
+$('pSized').addEventListener('change', () => {
+  sizeTouched = true;
+  const on = $('pSized').checked, none = !$('pSizeList').querySelector('input:checked');
+  if (on && none) $('pSizeList').querySelectorAll('input').forEach((i) => { i.checked = DEFAULT_SIZES.includes(i.value); });
+  $('pSizeList').classList.toggle('d-none', !on);
+});
+$('pSizeList').addEventListener('change', () => { sizeTouched = true; });
+$('pCat').addEventListener('change', () => { if (!sizeTouched) setSizeUI(sizesForCategory($('pCat').value)); });   // a new product follows its category until you change the sizes yourself
 function openProduct(p) {
   editingId = p?.id || null;
   $('pmTitle').textContent = p ? 'Edit product' : 'Add product';
@@ -594,6 +626,7 @@ function openProduct(p) {
   $('pPrice').value = p?.price ?? ''; $('pStock').value = p?.stock ?? ''; $('pLow').value = p?.low_stock_threshold ?? 5;
   $('pDeadline').value = p?.preorder_deadline ? new Date(new Date(p.preorder_deadline) - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
   $('pImage').value = ''; $('pActive').checked = p ? p.is_active : true;
+  sizeTouched = !!p; setSizeUI(p ? effectiveSizes(p) : sizesForCategory($('pCat').value));
   $('pActiveWrap').classList.toggle('d-none', !p);
   prodModal.show();
 }
@@ -607,8 +640,12 @@ $('prodRows').addEventListener('click', async (e) => {
   }
 });
 $('prodForm').addEventListener('submit', async (e) => {
-  e.preventDefault(); $('pSave').disabled = true;
+  e.preventDefault();
+  const pickedSizes = $('pSized').checked ? [...$('pSizeList').querySelectorAll('input:checked')].map((i) => i.value) : [];
+  if ($('pSized').checked && !pickedSizes.length) return toast('Tick at least one size, or turn off "This item comes in sizes".', 'warning');
+  $('pSave').disabled = true;
   const f = new FormData();
+  f.append('sizes', pickedSizes.join(','));   // empty = no sizes
   f.append('name', $('pName').value); f.append('category', $('pCat').value); f.append('description', $('pDesc').value); f.append('price', $('pPrice').value);
   f.append('stock', $('pStock').value); f.append('low_stock_threshold', $('pLow').value || 5);
   f.append('preorder_deadline', $('pDeadline').value ? new Date($('pDeadline').value).toISOString() : '');

@@ -1,4 +1,4 @@
--- MerchSys migration 11: pickup release confirmation
+-- BU Merch migration 11: pickup release confirmation
 -- Run in Supabase SQL Editor. Safe to run more than once (also safe if you already ran an earlier version of it).
 -- When staff hand an order over, they check the student's school ID and press "Release order".
 -- These columns record who collected it and who released it. (The ID number itself is only checked, never stored.)

@@ -22,8 +22,15 @@ async function uploadImage(file) {
   return admin.storage.from('product-images').getPublicUrl(name).data.publicUrl;
 }
 
+const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+
 function parseBody(b) {
   const out = {};
+  // sizes: "S,M,L" -> ['S','M','L'] (sorted small to large). An empty value means "this item has no sizes".
+  if (b.sizes !== undefined) {
+    const want = [...new Set(String(b.sizes).split(',').map((x) => x.trim().toUpperCase()).filter(Boolean))];
+    out.sizes = want.sort((a, c) => (SIZE_ORDER.indexOf(a) + 99) % 99 - (SIZE_ORDER.indexOf(c) + 99) % 99);
+  }
   if (b.name !== undefined) out.name = String(b.name).trim();
   if (b.description !== undefined) out.description = b.description;
   if (b.category !== undefined) out.category = b.category;
@@ -37,7 +44,12 @@ function parseBody(b) {
 
 const CATEGORIES = ['Clothes', 'Bags', 'Caps', 'Pins', 'Others'];
 const invalid = (p) =>
+  (p.sizes !== undefined && p.sizes.some((x) => !SIZE_ORDER.includes(x))) ||
   (p.category !== undefined && !CATEGORIES.includes(p.category)) || (p.name !== undefined && !p.name) || (p.price !== undefined && !(p.price >= 0)) || (p.stock !== undefined && !(p.stock >= 0));
+
+// If the sizes column is missing, tell the admin what to do instead of showing a database error
+const dbMessage = (error) => (/sizes/i.test(error.message) && /column|schema cache/i.test(error.message)
+  ? 'Sizes are not set up yet. Run db/migration-15-product-sizes.sql in the Supabase SQL Editor, then try again.' : error.message);
 
 // GET /api/products  (public; CDN-cached for speed). Optional ?page=&limit= (max 100); without them the shop gets up to 500 products.
 router.get('/', async (req, res) => {
@@ -69,7 +81,7 @@ router.post('/', staffOnly, upload.single('image'), async (req, res) => {
   if (!p.name || invalid(p) || p.price === undefined) return res.status(400).json({ message: 'Name and a valid price are required' });
   if (req.file) { try { p.image_url = await uploadImage(req.file); } catch (e) { return res.status(e.status || 500).json({ message: e.message }); } }
   const { data, error } = await admin.from('products').insert(p).select().single();
-  if (error) return res.status(400).json({ message: error.message });
+  if (error) return res.status(400).json({ message: dbMessage(error) });
   res.status(201).json(data);
 });
 
@@ -79,7 +91,7 @@ router.put('/:id', staffOnly, upload.single('image'), async (req, res) => {
   if (invalid(p)) return res.status(400).json({ message: 'Invalid product data' });
   if (req.file) { try { p.image_url = await uploadImage(req.file); } catch (e) { return res.status(e.status || 500).json({ message: e.message }); } }
   const { data, error } = await admin.from('products').update(p).eq('id', req.params.id).select().single();
-  if (error) return res.status(400).json({ message: error.message });
+  if (error) return res.status(400).json({ message: dbMessage(error) });
   res.json(data);
 });
 

@@ -1,4 +1,4 @@
--- MerchSys migration 05: provider-neutral checkout id (works for Maya or PayMongo)
+-- BU Merch migration 05: provider-neutral checkout id (works for Maya or PayMongo)
 -- Run BEFORE restarting the server. Safe to run more than once.
 do $$
 begin

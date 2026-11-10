@@ -1,4 +1,4 @@
-/* MerchSys shared helpers: API calls, auth, cart, nav, formatting */
+/* BU Merch shared helpers: API calls, auth, cart, nav, formatting */
 const API = '/api';
 
 const store = {
@@ -145,13 +145,13 @@ function showAnnouncement(a, force) {
   const el = document.createElement('div');
   el.id = 'annOverlay'; el.className = 'ann-overlay';
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Announcement');
-  el.innerHTML = `<div class="ann-card">
+  el.innerHTML = `<div class="ann-frame"><div class="ann-card">
       <div class="ann-head"><span class="brand">BU <span>Merch</span></span><button type="button" class="ann-x" aria-label="Close">&times;</button></div>
       <div class="ann-body">${image ? `<img class="ann-img" src="${esc(image)}" alt="Announcement picture">` : ''}${text ? `<p class="ann-text">${esc(text)}</p>` : ''}</div>
       <div class="ann-foot"><button type="button" class="btn btn-ms ann-never">Got it</button></div>
-    </div>`;
+    </div></div>`;
   const close = (never) => {
-    el.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', onKey);
+    el.remove(); unlockScroll(); document.removeEventListener('keydown', onKey);
     if (prevFocus && prevFocus.focus) prevFocus.focus();
     if (force) return; // admin preview never changes what students see
     try { sessionStorage.setItem('ms_ann_seen', stamp); } catch {}
@@ -164,12 +164,37 @@ function showAnnouncement(a, force) {
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   };
-  el.addEventListener('click', (e) => { if (e.target === el) close(false); });
+  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('ann-frame')) close(false); });
   el.querySelector('.ann-x').addEventListener('click', () => close(false));
   el.querySelector('.ann-never').addEventListener('click', () => close(true));
-  document.addEventListener('keydown', onKey);
-  document.body.appendChild(el); document.body.style.overflow = 'hidden';
-  el.querySelector('.ann-never').focus();
+  const open = () => {
+    if (document.getElementById('annOverlay')) return;
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(el); lockScroll();
+    el.querySelector('.ann-never').focus({ preventScroll: true });
+  };
+  if (image) { // wait for the picture so the card does not grow after it opens (that looks like jumping)
+    let shown = false; const go = () => { if (!shown) { shown = true; open(); } };
+    const pre = new Image(); pre.onload = pre.onerror = go; pre.src = image; setTimeout(go, 2500);
+  } else open();
+}
+
+// Freezes the page behind the popup. Without this, touching the popup on a phone scrolls the page underneath,
+// the browser's address bar slides in and out, and the popup moves up and down with it.
+let scrollLockY = null;
+function lockScroll() {
+  if (scrollLockY !== null) return;
+  scrollLockY = window.scrollY || 0;
+  const b = document.body.style;
+  b.position = 'fixed'; b.top = `-${scrollLockY}px`; b.left = '0'; b.right = '0'; b.width = '100%';
+  document.documentElement.style.overscrollBehavior = 'none';
+}
+function unlockScroll() {
+  if (scrollLockY === null) return;
+  const b = document.body.style, y = scrollLockY; scrollLockY = null;
+  b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = '';
+  document.documentElement.style.overscrollBehavior = '';
+  window.scrollTo(0, y);
 }
 
 /* ---------- Shop open/closed and maintenance mode (set by admin in Admin > Shop status) ---------- */
@@ -384,7 +409,7 @@ async function renderFooter() {
   let campuses = [];
   try { campuses = await api('/campuses', { auth: false }); } catch {}
   el.innerHTML = `<footer class="site"><div class="container"><div class="row g-4">
-    <div class="col-md-5"><div class="brand fs-5 text-white mb-2">BU Merch</div><div>Official Bicol University merchandise. Pre-order online and pick it up at your campus.</div><div class="small mt-3">Powered by MerchSys (IT 118 project)</div></div>
+    <div class="col-md-5"><div class="brand fs-5 text-white mb-2">BU Merch</div><div>Official Bicol University merchandise. Pre-order online and pick it up at your campus.</div><div class="small mt-3">Powered by BU Merch (IT 118 project)</div></div>
     <div class="col-md-7"><h6>Pickup locations</h6><div class="row small">${campuses.map((c) => `<div class="col-sm-6 col-lg-4 mb-2">${esc(c.name)}${c.is_main ? ' (Main)' : ''}</div>`).join('')}</div></div>
   </div></div></footer>`;
 }
