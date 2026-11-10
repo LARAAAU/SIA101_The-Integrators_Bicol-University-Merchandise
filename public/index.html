@@ -9,7 +9,6 @@
   position:relative !important; width:100%; max-width:480px; aspect-ratio:1/1;
   margin:0 auto 32px; height:auto !important;
 }
-/* soft aurora disc, orbiting light arc, twinkling stars */
 .hero .hero-art .disc{
   position:absolute !important; inset:6% !important; border-radius:50% !important;
   background:
@@ -34,7 +33,6 @@
 }
 .hero .hero-art .disc::after{top:7%; right:11%}
 .hero .hero-art::after{width:14px; height:14px; left:1%; top:7%; animation-delay:-1.6s}
-/* floating cut-out items (background removed in the browser) */
 .hero .hero-art .tile{
   position:absolute !important; display:flex; align-items:center; justify-content:center;
   overflow:visible; background:transparent; border:0; box-shadow:none; border-radius:0;
@@ -47,12 +45,10 @@
   filter:drop-shadow(0 0 10px rgba(125,211,252,.45)) drop-shadow(0 16px 22px rgba(139,125,255,.28));
   animation:heroGlow 4.5s ease-in-out infinite; animation-delay:inherit;
 }
-/* soft light pool under each floating item */
 .hero .hero-art .tile::after{
   content:""; position:absolute; left:16%; right:16%; bottom:-4%; height:9%; border-radius:50%; z-index:-1;
   background:radial-gradient(closest-side, rgba(125,211,252,.6), transparent); filter:blur(7px);
 }
-/* fallbacks: no picture -> glass circle with the letter; picture from another site -> white card */
 .hero .hero-art .tile.noimg{
   background:rgba(255,255,255,.1); border:1px solid rgba(186,230,253,.45); border-radius:50% !important;
   box-shadow:0 0 30px rgba(125,211,252,.35);
@@ -70,7 +66,6 @@
 .hero .hero-art .t2{right:3% !important; top:3% !important; width:40%; height:46%; rotate:4deg; animation-delay:-2s}
 .hero .hero-art .t3{right:7% !important; top:49% !important; width:38%; height:38%; rotate:-2deg; animation-delay:-4s}
 .hero .hero-art .t3 .cap{bottom:2%}
-/* orbit + stars around each item (colours match the disc: sky blue, lavender, pink) */
 .hero .hero-art .t1{--c:125,211,252}
 .hero .hero-art .t2{--c:196,181,253}
 .hero .hero-art .t3{--c:244,176,214}
@@ -95,7 +90,6 @@
 .hero .hero-art .spark.s2{right:-6%; top:18%; width:9px; height:9px; animation-delay:-1s}
 .hero .hero-art .spark.s3{left:0; bottom:12%; width:8px; height:8px; animation-delay:-2s}
 .hero .hero-art .spark.s4{right:4%; bottom:0; width:11px; height:11px; animation-delay:-.6s}
-/* countdown pill: frosted card centred under the collage */
 .hero .hero-art .cd-pill{
   position:absolute !important; left:50% !important; bottom:-4% !important; right:auto !important; top:auto !important;
   transform:translateX(-50%); width:max-content; max-width:94%; text-align:center;
@@ -105,7 +99,6 @@
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   box-shadow:0 18px 40px rgba(10,25,40,.28);
 }
-/* thin light-blue accent line on top of the pill */
 .hero .hero-art .cd-pill::before{
   content:""; position:absolute; left:18%; right:18%; top:-1px; height:2px; border-radius:2px;
   background:linear-gradient(90deg,transparent,#38bdf8,transparent);
@@ -144,7 +137,6 @@
   background:conic-gradient(from 0deg, transparent 0 55%, rgba(37,99,235,.95) 82%, rgba(139,92,246,.95) 93%, transparent 100%);
   opacity:1;
 }
-/* stars: coloured instead of white so they show on a light background */
 :root:not([data-bs-theme="dark"]) .hero .hero-art .disc::after,
 :root:not([data-bs-theme="dark"]) .hero .hero-art::after{
   background:linear-gradient(135deg,#3b82f6,#8b5cf6); filter:drop-shadow(0 0 5px rgba(99,102,241,.55));
@@ -153,16 +145,13 @@
 :root:not([data-bs-theme="dark"]) .hero .hero-art .spark b,
 :root:not([data-bs-theme="dark"]) .hero .hero-art .orbstar b{background:rgb(var(--c))}
 :root:not([data-bs-theme="dark"]) .hero .hero-art .orbstar{filter:drop-shadow(0 0 6px rgba(var(--c),.9)) drop-shadow(0 0 12px rgba(var(--c),.5))}
-/* orbit ring: stronger line */
 :root:not([data-bs-theme="dark"]) .hero .hero-art .orb{
   border:1.5px solid rgba(var(--c),.6);
   box-shadow:0 0 14px rgba(var(--c),.3), inset 0 0 16px rgba(var(--c),.12);
 }
-/* items: real drop shadow for depth + a tinted glow */
 :root:not([data-bs-theme="dark"]) .hero .hero-art .tile img{animation-name:heroGlowL}
 :root:not([data-bs-theme="dark"]) .hero .hero-art .tile.raw img{animation:none; filter:none}
 :root:not([data-bs-theme="dark"]) .hero .hero-art .tile::after{background:radial-gradient(closest-side, rgba(30,64,175,.4), transparent); filter:blur(8px)}
-/* countdown card */
 :root:not([data-bs-theme="dark"]) .hero .hero-art .cd-pill{
   background:rgba(255,255,255,.9); border:1px solid rgba(96,165,250,.38);
   box-shadow:0 20px 38px -12px rgba(30,64,175,.35);
@@ -182,6 +171,20 @@
 @keyframes heroPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}100%{box-shadow:0 0 0 9px rgba(34,197,94,0)}}
 @media (max-width:575px){.hero .hero-art{max-width:340px}}
 @media (prefers-reduced-motion:reduce){.hero .hero-art,.hero .hero-art *,.hero .hero-art::after,.hero .hero-art *::before,.hero .hero-art *::after{animation:none !important}}
+
+/* ===== SIZE PICKER ===== */
+.size-pills{display:flex; flex-wrap:wrap; gap:8px}
+.size-pills button{
+  min-width:54px; padding:8px 14px; border-radius:999px; font-weight:700;
+  border:1px solid var(--line); background:transparent; color:var(--ink);
+}
+.size-pills button.on{background:var(--link); border-color:var(--link); color:#fff}
+#sizeModal .modal-content{background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:20px}
+#sizeModal img.chart{width:100%; border-radius:14px; display:block}
+#sizeModal .btn-close{filter:var(--bs-btn-close-white-filter, none)}
+.size-row{display:flex; gap:6px; margin:8px 0 2px}
+.size-row button{flex:1; padding:6px 8px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink); font:600 .75rem 'DM Sans',sans-serif}
+.size-row button.picked{background:var(--link); border-color:var(--link); color:#fff}
 </style></head><body>
 <div id="nav"></div>
 <main class="container pb-4">
@@ -219,19 +222,47 @@
     <div class="reminder mt-3 small"><b>Heads up:</b> some orders are picked up at the <b>Main Campus</b> instead. Your order page and email always show the exact pickup location.</div>
   </section>
 </main>
+
+<!-- Size chart (picture only) -->
+<div class="modal fade" id="chartModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:20px">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="chName"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body"><img id="chImg" class="chart" src="" alt="Size chart (in cm)" style="width:100%;border-radius:14px;display:none"><div id="chTable"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Size picker -->
+<div class="modal fade" id="sizeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <div><h5 class="modal-title fw-bold" id="szName"></h5><div class="muted small" id="szPrice"></div></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="fw-bold mb-2">Choose your size</div>
+        <div class="size-pills" id="szPills" role="radiogroup" aria-label="Available sizes"></div>
+        <div class="text-danger small mt-2" id="szErr" style="min-height:1.3em" role="alert"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0"><button class="btn btn-gold w-100" id="szConfirm">Confirm size</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="footer"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/js/app.js"></script><script src="/js/select.js"></script>
+<script src="/js/app.js"></script><script src="/js/select.js"></script><script src="/js/size-config.js"></script>
 <script>
 renderNav('shop'); renderFooter();
 const CATS = [['All', '✨'], ['Clothes', '👕'], ['Bags', '🎒'], ['Caps', '🧢'], ['Pins', '📌'], ['Others', '🎁']];
 let products = [], cat = 'All', deadline = null;
 
 // ====== PUT YOUR PICTURES HERE ======
-// Key = product name EXACTLY as it appears in your database.
-// Value = path to the image file (relative to your site root).
-// An image_url set from the Admin page still takes priority over this list.
-// (Duplicate keys removed: in JavaScript the last duplicate wins, so these are your effective values.)
 const IMAGES = {
   'BU Tote Bag':         '/img/tote-bag.png',
   'BU Cap':              '/img/9.png',
@@ -245,6 +276,17 @@ const IMAGES = {
 };
 const imgOf = (p) => p.image_url || IMAGES[p.name] || '';
 // =====================================
+
+// ====== SIZES ======  (edit sizes and chart pictures in /js/size-config.js)
+// Safety net: if /js/size-config.js is missing or old, the shop still works with these defaults
+const NAME_RULE = /hoodie|shirt|\btee|sleeve|jersey|polo|jacket/i;   // hoodies/shirts saved under any category
+const FALLBACK_TABLE = { head: ['Size', 'Width (cm)', 'Height (cm)'], rows: [['S', 47, 65], ['M', 50, 68], ['L', 53, 71], ['XL', 56, 74], ['2XL', 59, 77]] };
+const CFG = (typeof SIZE_CONFIG !== 'undefined') ? SIZE_CONFIG : {};
+const needsSize = (p) => (CFG.needsSize ? CFG.needsSize(p) : p.category === 'Clothes') || NAME_RULE.test(p.name || '');
+const sizesOf = (p) => CFG.sizesOf ? CFG.sizesOf(p) : ['S', 'M', 'L', 'XL', '2XL'];
+const chartOf = (p) => CFG.chartOf ? CFG.chartOf(p) : '/img/size-chart.jpg';
+const tableOf = (p) => CFG.tableOf ? CFG.tableOf(p) : FALLBACK_TABLE;
+const picked = {};   // product id -> chosen size
 
 function drawCats() {
   document.getElementById('cats').innerHTML = CATS.map(([n, i]) =>
@@ -262,6 +304,8 @@ function card(p) {
     '<div class="body"><div class="muted small">' + esc(p.category) + '</div><div class="fw-bold">' + esc(p.name) + '</div>' +
     '<div class="muted small">' + (soldOut ? 'Sold out' : closed ? 'Pre-order closed' : (p.preorder_deadline ? 'Closes ' + fmtDate(p.preorder_deadline) : p.stock + ' available')) + '</div>' +
     '<div class="row-end"><div class="price">' + peso(p.price) + '</div></div>' +
+    (needsSize(p) && !off ? '<div class="size-row"><button type="button" data-chart="' + esc(p.id) + '">Size chart</button>' +
+      '<button type="button" data-pick="' + esc(p.id) + '" class="' + (picked[p.id] ? 'picked' : '') + '">' + (picked[p.id] ? 'Size: ' + esc(picked[p.id]) : 'Select size') + '</button></div>' : '') +
     '<div class="actions">' +
       '<button class="btn btn-gold buy" data-buy="' + p.id + '"' + (off ? ' disabled' : '') + '>Order now</button>' +
       '<button class="add" data-id="' + p.id + '" aria-label="Add ' + esc(p.name) + ' to cart"' + (off ? ' disabled' : '') + '>+</button>' +
@@ -290,17 +334,66 @@ function tick() {
 document.getElementById('cats').addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (b) { cat = b.dataset.c; drawCats(); drawGrid(); } });
 document.getElementById('search').addEventListener('input', drawGrid);
 
-// "+" button: add to cart and stay on the page
-document.getElementById('grid').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-id]'); if (!b) return;
-  const p = products.find((x) => x.id === b.dataset.id);
-  Cart.add(p) ? toast(p.name + ' added to cart', 'success') : toast('You already have all the available stock in your cart', 'warning');
+// ====== SIZE CHART + SIZE PICKER ======
+const chartModal = new bootstrap.Modal(document.getElementById('chartModal'));
+const sizeModal = new bootstrap.Modal(document.getElementById('sizeModal'));
+let szProduct = null, szPick = null, afterPick = null;
+const byId = (id) => products.find((x) => x.id === id);
+
+function openChart(p) {
+  document.getElementById('chName').textContent = p.name + ' · Size chart';
+  const im = document.getElementById('chImg'), tb = document.getElementById('chTable');
+  const t = tableOf(p);
+  // The built-in table is always ready; the picture replaces it only when it loads
+  tb.innerHTML = '<table class="table align-middle text-center mb-0" style="--bs-table-bg:transparent;--bs-table-color:var(--ink)"><thead><tr>' +
+    t.head.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
+    t.rows.map((r) => '<tr>' + r.map((v, i) => i ? '<td>' + esc(String(v)) + '</td>' : '<th>' + esc(String(v)) + '</th>').join('') + '</tr>').join('') +
+    '</tbody></table><div class="muted small mt-2">Measurements are in centimeters. Choose the size closest to your own measurements.</div>';
+  tb.style.display = ''; im.style.display = 'none';
+  im.onload = () => { im.style.display = 'block'; tb.style.display = 'none'; };
+  im.onerror = () => { im.style.display = 'none'; tb.style.display = ''; };
+  im.src = chartOf(p) + '?v=1';
+  chartModal.show();
+}
+function openPicker(p, then) {
+  szProduct = p; szPick = picked[p.id] || null; afterPick = then || null;
+  document.getElementById('szName').textContent = p.name;
+  document.getElementById('szPrice').textContent = peso(p.price);
+  document.getElementById('szErr').textContent = '';
+  document.getElementById('szPills').innerHTML = sizesOf(p).map((s) =>
+    '<button type="button" role="radio" class="' + (s === szPick ? 'on' : '') + '" aria-checked="' + (s === szPick) + '" data-size="' + esc(s) + '">' + esc(s) + '</button>').join('');
+  sizeModal.show();
+}
+document.getElementById('szPills').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-size]'); if (!b) return;
+  szPick = b.dataset.size;
+  document.querySelectorAll('#szPills button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+  document.getElementById('szErr').textContent = '';
+});
+document.getElementById('szConfirm').addEventListener('click', () => {
+  if (!szPick) { document.getElementById('szErr').textContent = 'Please choose a size first.'; return; }
+  picked[szProduct.id] = szPick;
+  sizeModal.hide(); drawGrid();
+  if (afterPick) afterPick(szPick);
 });
 
-// "Order now" button: go straight to the checkout page for this one product (the cart is not used)
 document.getElementById('grid').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-buy]'); if (!b) return;
-  location.href = '/checkout.html?product=' + encodeURIComponent(b.dataset.buy);
+  const chart = e.target.closest('[data-chart]'), pick = e.target.closest('[data-pick]');
+  if (chart) return openChart(byId(chart.dataset.chart));
+  if (pick) return openPicker(byId(pick.dataset.pick));
+
+  const add = e.target.closest('button[data-id]'), buy = e.target.closest('button[data-buy]');
+  const id = add?.dataset.id || buy?.dataset.buy; if (!id) return;
+  const p = byId(id); if (!p) return;
+  const go = (size) => {
+    if (add) Cart.add(size ? { ...p, size } : p)
+      ? toast(p.name + (size ? ' (' + size + ')' : '') + ' added to cart', 'success')
+      : toast('You already have all the available stock in your cart', 'warning');
+    else location.href = '/checkout.html?product=' + encodeURIComponent(id) + (size ? '&size=' + encodeURIComponent(size) : '');
+  };
+  if (!needsSize(p)) return go(null);
+  if (picked[id]) return go(picked[id]);
+  openPicker(p, go);   // no size chosen yet: ask first, then continue
 });
 
 // Cut the item out of its photo: remove the white background (only the part touching the edges) and crop to the item
@@ -334,7 +427,7 @@ function cutout(src) {
           if (bg[p]) { px[i + 3] = 0; continue; }
           const cx = p % w, cy = (p / w) | 0;
           const edge = (cx > 0 && bg[p - 1]) || (cx < w - 1 && bg[p + 1]) || (cy > 0 && bg[p - w]) || (cy < h - 1 && bg[p + w]);
-          if (edge) { // soften the fringe so no white outline is left around the item
+          if (edge) {
             const lum = Math.min(px[i], px[i + 1], px[i + 2]);
             if (lum > 200) px[i + 3] = Math.max(0, Math.min(255, (238 - lum) / 38 * 255));
           }
@@ -346,7 +439,7 @@ function cutout(src) {
         const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
         o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
         resolve(o.toDataURL('image/png'));
-      } catch (e) { reject({ type: 'taint' }); } // picture hosted on another site: the browser blocks pixel access
+      } catch (e) { reject({ type: 'taint' }); }
     };
     im.src = src;
   });
@@ -354,7 +447,6 @@ function cutout(src) {
   return job;
 }
 
-// Orbit ring + stars drawn around each floating item
 const FX = '<i class="orb"></i><i class="orbstar"><b></b></i><i class="spark s1"><b></b></i><i class="spark s2"><b></b></i><i class="spark s3"><b></b></i><i class="spark s4"><b></b></i>';
 const STILL = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 let orbitOn = false;
@@ -363,16 +455,14 @@ function orbitLoop(t) {
   document.querySelectorAll('.hero-art .tile').forEach((tile, i) => {
     const star = tile.querySelector('.orbstar'); if (!star) return;
     const w = tile.offsetWidth, h = tile.offsetHeight;
-    const ang = (STILL ? 0 : t) * (0.00075 + i * 0.00012) + i * 2.1;   // each item orbits at its own pace
-    const x = w * 0.64 * Math.cos(ang), y = h * 0.18 * Math.sin(ang);   // same ellipse as the ring
+    const ang = (STILL ? 0 : t) * (0.00075 + i * 0.00012) + i * 2.1;
+    const x = w * 0.64 * Math.cos(ang), y = h * 0.18 * Math.sin(ang);
     star.style.transform = 'translate(' + (w * 0.5 + x * c - y * sn) + 'px,' + (h * 0.52 + x * sn + y * c) + 'px)';
-    star.style.zIndex = Math.sin(ang) > 0 ? 3 : -1;                      // passes in front, then behind the item
+    star.style.zIndex = Math.sin(ang) > 0 ? 3 : -1;
   });
   requestAnimationFrame(orbitLoop);
 }
 
-// Hero collage: pictures set by the admin (Admin > Shop status > Homepage pictures) come first;
-// any empty slot is filled with an in-stock product that has a picture, then the rest
 let heroCfg = {};
 function drawHero() {
   const good = products.filter((p) => imgOf(p) && p.stock > 0);

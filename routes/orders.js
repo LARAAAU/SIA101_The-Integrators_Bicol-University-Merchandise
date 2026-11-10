@@ -10,6 +10,7 @@ const { logEvent, getEvents } = require('../lib/orderEvents');
 const { sendReminder } = require('../lib/pickupReminders');
 const { parsePage, envelope, cleanSearch } = require('../lib/paginate');
 const { requireShopOpen } = require('../middleware/shopStatus');
+const SIZE_CONFIG = require('../lib/size-config');
 
 const STATUSES = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed', 'cancelled'];
 // Allowed order flow. An order can move forward (skipping steps is fine) or be cancelled
@@ -22,6 +23,8 @@ const canMove = (from, to) =>
 
 const PAYMENT_METHODS = ['gcash_online', 'gcash_manual', 'onsite'];
 const LIST_SELECT = '*, order_items(*), profiles(full_name, university_email, course, student_id, year_level, block, phone), campus:campuses(name)';
+
+const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL']; // sizes the server will ever accept
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -40,26 +43,57 @@ async function withReceiptUrl(order) {
   return order;
 }
 
-// POST /api/orders  { items:[{product_id, quantity}], payment_method }
+// POST /api/orders  { items:[{product_id, quantity, size?}], payment_method, campus_id }
 router.post('/', requireAuth, requireShopOpen, async (req, res) => {
   const { items, payment_method, campus_id } = req.body;
   if (!campus_id) return res.status(400).json({ message: 'Please choose a pickup campus' });
   if (!Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Your cart is empty' });
   if (!PAYMENT_METHODS.includes(payment_method)) return res.status(400).json({ message: 'Invalid payment method' });
 
+  // Merge duplicate lines. The same product in a different size stays a separate line.
   const merged = {};
   for (const it of items) {
     const qty = parseInt(it.quantity, 10);
-    if (!it.product_id || !(qty >= 1 && qty <= 50)) return res.status(400).json({ message: 'Invalid item or quantity' });
-    merged[it.product_id] = (merged[it.product_id] || 0) + qty;
+    const size = it.size ? String(it.size).trim().toUpperCase() : null;
+    if (!it.product_id || !(qty >= 1 && qty <= 50) || (size && !ALL_SIZES.includes(size)))
+      return res.status(400).json({ message: 'Invalid item or quantity' });
+    const key = it.product_id + '|' + (size || '');
+    merged[key] = { product_id: it.product_id, size, quantity: (merged[key]?.quantity || 0) + qty };
   }
-  const clean = Object.entries(merged).map(([product_id, quantity]) => ({ product_id, quantity }));
+  const clean = Object.values(merged);
+
+  // Sizes are checked on the server: clothes need a size, and it must be one the product offers
+  const { data: prods, error: pErr } = await admin.from('products').select('*')
+    .in('id', [...new Set(clean.map((c) => c.product_id))]);
+  if (pErr) return res.status(500).json({ message: pErr.message });
+  for (const c of clean) {
+    const p = prods?.find((x) => x.id === c.product_id);
+    if (!p) return res.status(400).json({ message: 'One of the items is no longer available' });
+    if (SIZE_CONFIG.needsSize(p)) {
+      if (!c.size) return res.status(400).json({ message: 'Please choose a size for ' + p.name });
+      if (!SIZE_CONFIG.sizesOf(p).includes(c.size)) return res.status(400).json({ message: 'Size ' + c.size + ' is not available for ' + p.name });
+    } else c.size = null;
+  }
 
   // Stock check + deduction + order insert happen in ONE database transaction (see db/schema.sql)
   const { data: orderId, error } = await admin.rpc('create_order', {
-    p_student: req.user.id, p_items: clean, p_payment_method: payment_method, p_campus: campus_id,
+    p_student: req.user.id, p_items: clean.map(({ product_id, quantity }) => ({ product_id, quantity })), p_payment_method: payment_method, p_campus: campus_id,
   });
   if (error) return res.status(400).json({ message: error.message });
+
+  // No database change needed: the chosen size is saved in the item name, e.g. "BU Hoodie (M)".
+  // That way it shows on the order page, in emails, and for staff without touching any other file.
+  try {
+    const { data: rows } = await admin.from('order_items').select('*').eq('order_id', orderId);
+    const used = new Set();
+    for (const c of clean.filter((x) => x.size)) {
+      const p = prods.find((x) => x.id === c.product_id);
+      const row = (rows || []).find((r) => !used.has(r.id) && (r.product_id ? r.product_id === c.product_id : r.product_name === p.name) && r.quantity === c.quantity);
+      if (!row) continue;
+      used.add(row.id);
+      await admin.from('order_items').update({ product_name: row.product_name + ' (' + c.size + ')' }).eq('id', row.id);
+    }
+  } catch (e) { console.error('Could not save sizes on order', orderId, e.message); }
 
   const order = await getOrder(orderId);
   await logEvent(orderId, { event: 'placed', to: 'pending', actor: req.user, note: 'Order placed' });

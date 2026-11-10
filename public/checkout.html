@@ -2,7 +2,19 @@
 <script src="/js/theme.js"></script><script src="/js/loader.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Order now</title></head><body>
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Order now</title>
+<style>
+.ck-detail{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px}
+.ck-detail > div{border:1px solid var(--line); border-radius:14px; padding:9px 12px; min-width:0}
+.ck-detail small{display:block; font-size:.62rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-weight:700}
+.ck-detail b{display:block; font-size:1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ck-detail .hl b{color:var(--link)}
+.size-pills{display:flex; flex-wrap:wrap; gap:8px}
+.size-pills button{min-width:52px; padding:7px 14px; border-radius:999px; font-weight:700; border:1px solid var(--line); background:transparent; color:var(--ink)}
+.size-pills button.on{background:var(--link); border-color:var(--link); color:#fff}
+.ck-sum{border-top:1px dashed var(--line); margin-top:14px; padding-top:12px}
+.ck-sum .r{display:flex; justify-content:space-between; gap:12px; padding:3px 0}
+</style></head><body>
 <div id="nav"></div>
 <main class="container pb-5" style="max-width:620px">
   <a href="/index.html" class="small text-decoration-none">&larr; Back to shop</a>
@@ -23,18 +35,26 @@
       <label class="pay-opt"><input type="radio" name="pm" value="onsite" class="form-check-input me-2"><b>Pay onsite</b><div class="muted small ms-4">Pay in cash when you pick up your order.</div></label>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3"><span>Total</span><span class="display-num fs-3 fw-bold" id="total"></span></div>
+    <div class="ck-sum" id="summary"></div>
+    <div class="d-flex justify-content-between align-items-center my-3"><span>Total</span><span class="display-num fs-3 fw-bold" id="total"></span></div>
     <button class="btn btn-gold w-100 btn-lg" id="placeBtn">Place order</button>
   </div>
 </main>
 <div id="footer"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/js/app.js"></script><script src="/js/select.js"></script>
+<script src="/js/app.js"></script><script src="/js/select.js"></script><script src="/js/size-config.js"></script>
 <script>
 renderNav(''); renderFooter();
 const $ = (id) => document.getElementById(id);
-const productId = new URLSearchParams(location.search).get('product');
-let campuses = [], product = null, qty = 1;
+const qs = new URLSearchParams(location.search);
+const productId = qs.get('product');
+let campuses = [], product = null, qty = 1, size = (qs.get('size') || '').toUpperCase() || null;
+
+// Sizes (uses /js/size-config.js; works with these defaults if that file is missing)
+const NAME_RULE = /hoodie|shirt|\btee|sleeve|jersey|polo|jacket/i;
+const CFG = (typeof SIZE_CONFIG !== 'undefined') ? SIZE_CONFIG : {};
+const needsSize = (p) => (CFG.needsSize ? CFG.needsSize(p) : p.category === 'Clothes') || NAME_RULE.test(p.name || '');
+const sizesOf = (p) => CFG.sizesOf ? CFG.sizesOf(p) : ['S', 'M', 'L', 'XL', '2XL'];
 
 if (requireLogin()) init();
 
@@ -49,6 +69,7 @@ async function init() {
       $('item').innerHTML = '<div class="text-center py-3"><div class="fw-bold mb-1">This item is not available for pre-order.</div><a href="/index.html">Back to shop</a></div>';
       return;
     }
+    if (needsSize(product) && !sizesOf(product).includes(size)) size = null; // unknown size in the link: ask again
 
     const saved = store.get('ms_campus') || Auth.user()?.campus_id;
     $('campus').innerHTML = '<option value="">Choose your college or campus</option>' + campuses.map((c) =>
@@ -59,16 +80,41 @@ async function init() {
 }
 
 function drawItem() {
+  const sized = needsSize(product);
+  const sub = product.price * qty;
   $('item').innerHTML =
     '<div class="d-flex flex-wrap align-items-center gap-3">' +
       (product.image_url ? '<img class="thumb" src="' + esc(product.image_url) + '" alt="">' : '<div class="thumb d-flex align-items-center justify-content-center fw-bold">' + esc(product.name.charAt(0)) + '</div>') +
-      '<div class="flex-grow-1" style="min-width:140px"><div class="fw-bold">' + esc(product.name) + '</div><div class="muted small">' + peso(product.price) + ' each</div></div>' +
+      '<div class="flex-grow-1" style="min-width:140px"><div class="fw-bold">' + esc(product.name) + (sized && size ? ' <span class="badge text-bg-primary align-middle">' + esc(size) + '</span>' : '') + '</div><div class="muted small">' + peso(product.price) + ' each</div></div>' +
       '<div class="btn-group btn-group-sm"><button class="btn btn-outline-ms" data-a="dec" aria-label="Less">-</button><span class="btn disabled qty-n">' + qty + '</span><button class="btn btn-outline-ms" data-a="inc" aria-label="More">+</button></div>' +
-    '</div>';
+    '</div>' +
+    // order details right under the product
+    '<div class="ck-detail">' +
+      (sized ? '<div class="hl"><small>Size</small><b>' + (size ? esc(size) : 'Not chosen') + '</b></div>' : '<div><small>Category</small><b>' + esc(product.category || '-') + '</b></div>') +
+      '<div><small>Quantity</small><b>' + qty + (qty === 1 ? ' piece' : ' pieces') + '</b></div>' +
+      '<div><small>Subtotal</small><b>' + peso(sub) + '</b></div>' +
+    '</div>' +
+    (sized ? '<div class="mt-3"><div class="fw-bold small mb-2">Choose your size</div><div class="size-pills" role="radiogroup" aria-label="Size">' +
+      sizesOf(product).map((s) => '<button type="button" role="radio" aria-checked="' + (s === size) + '" class="' + (s === size ? 'on' : '') + '" data-size="' + esc(s) + '">' + esc(s) + '</button>').join('') +
+      '</div></div>' : '');
+  drawSummary();
+}
+
+function drawSummary() {
+  const sized = needsSize(product);
+  $('summary').innerHTML =
+    '<div class="fw-bold mb-1">Order summary</div>' +
+    '<div class="r"><span class="muted">Item</span><span>' + esc(product.name) + '</span></div>' +
+    (sized ? '<div class="r"><span class="muted">Size</span><span>' + (size ? esc(size) : '<span class="text-warning">Please choose a size</span>') + '</span></div>' : '') +
+    '<div class="r"><span class="muted">Price</span><span>' + peso(product.price) + ' x ' + qty + '</span></div>';
   $('total').textContent = peso(product.price * qty);
 }
+
 $('item').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-a]'); if (!b || !product) return;
+  if (!product) return;
+  const sz = e.target.closest('button[data-size]');
+  if (sz) { size = sz.dataset.size; drawItem(); return; }
+  const b = e.target.closest('button[data-a]'); if (!b) return;
   if (b.dataset.a === 'inc') { if (qty >= product.stock) return toast('No more stock available', 'warning'); qty++; }
   if (b.dataset.a === 'dec' && qty > 1) qty--;
   drawItem();
@@ -83,13 +129,16 @@ $('campus').addEventListener('change', () => { store.set('ms_campus', $('campus'
 
 $('placeBtn').addEventListener('click', async (e) => {
   if (!requireLogin()) return;
+  if (needsSize(product) && !size) { toast('Please choose a size first', 'warning'); $('item').scrollIntoView({ behavior: 'smooth' }); return; }
   if (!$('campus').value) { toast('Please choose a pickup campus', 'warning'); $('campus').focus(); return; }
   const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Placing order...';
   const method = document.querySelector('input[name=pm]:checked').value;
   let order;
   try {
-    // Only this one product is ordered. The cart is not touched.
-    order = await api('/orders', { method: 'POST', body: { payment_method: method, campus_id: $('campus').value, items: [{ product_id: product.id, quantity: qty }] } });
+    // Only this one product is ordered. The cart is not touched. The size is sent with the item.
+    const item = { product_id: product.id, quantity: qty };
+    if (needsSize(product)) item.size = size;
+    order = await api('/orders', { method: 'POST', body: { payment_method: method, campus_id: $('campus').value, items: [item] } });
   } catch (err) { fail(err); btn.disabled = false; btn.textContent = 'Place order'; return; }
   try {
     if (method === 'gcash_online') { const r = await api('/payments/checkout', { method: 'POST', body: { order_id: order.id } }); location.href = r.checkout_url; return; }
