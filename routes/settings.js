@@ -110,11 +110,24 @@ router.put('/shop', adminOnly, async (req, res) => {
   if (announce_image_url && !announce_image_url.startsWith(ANN_IMG_PREFIX())) return res.status(400).json({ message: 'Invalid announcement image' });
   if (announce.length > 500) return res.status(400).json({ message: 'The announcement can be at most 500 characters' });
 
+  // Pre-order countdown (only touched when the form sends it, so older pages never wipe it)
+  const countdown = {};
+  if (req.body.countdown_enabled !== undefined) {
+    if (typeof req.body.countdown_enabled !== 'boolean') return res.status(400).json({ message: 'Invalid countdown settings' });
+    const cdAt = String(req.body.countdown_at || '').trim();
+    const cdLabel = String(req.body.countdown_label || '').trim();
+    if (cdAt && isNaN(new Date(cdAt).getTime())) return res.status(400).json({ message: 'Enter a valid countdown date and time' });
+    if (cdLabel.length > 40) return res.status(400).json({ message: 'The countdown label can be at most 40 characters' });
+    countdown.countdown_enabled = req.body.countdown_enabled;
+    countdown.countdown_at = cdAt ? new Date(cdAt).toISOString() : null;
+    countdown.countdown_label = cdLabel || null;
+  }
+
   const { data, error } = await admin.from('shop_settings')
     .upsert({ id: 1, is_open, maintenance_mode, closed_message: closed || null, maintenance_message: maint || null,
-      announcement_enabled, announcement_text: announce || null, announcement_image_url: announce_image_url || null, updated_at: new Date().toISOString(), updated_by: req.user.id })
+      announcement_enabled, announcement_text: announce || null, announcement_image_url: announce_image_url || null, ...countdown, updated_at: new Date().toISOString(), updated_by: req.user.id })
     .select('*').single();
-  if (error) return res.status(500).json({ message: 'Could not save. Did you run db/migration-07-shop-settings.sql and db/migration-10-announcement.sql in Supabase?' });
+  if (error) return res.status(500).json({ message: 'Could not save. Did you run db/migration-07-shop-settings.sql, db/migration-10-announcement.sql and db/migration-16-countdown.sql in Supabase?' });
   clearShopCache();
   res.json({ ...(await getShop()), ...pick(data) });
 });

@@ -260,7 +260,7 @@
 <script>
 renderNav('shop'); renderFooter();
 const CATS = [['All', '✨'], ['Clothes', '👕'], ['Bags', '🎒'], ['Caps', '🧢'], ['Pins', '📌'], ['Others', '🎁']];
-let products = [], cat = 'All', deadline = null;
+let products = [], cat = 'All', deadline = null, cdLabel = 'Next pre-order closes in';
 
 // ====== PUT YOUR PICTURES HERE ======
 const IMAGES = {
@@ -327,7 +327,7 @@ function tick() {
   const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4), s = Math.floor(ms % 6e4 / 1e3);
   const pad = (n) => String(n).padStart(2, '0');
   const units = [[pad(d), 'Days'], [pad(h), 'Hrs'], [pad(m), 'Min'], [pad(s), 'Sec']];
-  el.innerHTML = '<small class="cd-label">Next pre-order closes in</small><div class="cd-seg">' +
+  el.innerHTML = '<small class="cd-label">' + esc(cdLabel) + '</small><div class="cd-seg">' +
     units.map((u) => '<div class="u"><b>' + u[0] + '</b><span>' + u[1] + '</span></div>').join('') + '</div>';
 }
 
@@ -494,10 +494,18 @@ function drawHero() {
     try { heroCfg = await api('/settings/shop', { auth: false }) || {}; } catch {}
     drawHero();
     if (!orbitOn) { orbitOn = true; requestAnimationFrame(orbitLoop); }
-    const open = products.filter((p) => p.preorder_deadline && new Date(p.preorder_deadline) > new Date() && p.stock > 0)
-      .sort((a, b) => new Date(a.preorder_deadline) - new Date(b.preorder_deadline))[0];
-    if (open) { deadline = { at: new Date(open.preorder_deadline).getTime(), name: open.name }; tick(); setInterval(tick, 1000); }
-    else document.getElementById('countdown').innerHTML = '<small>No pre-order deadline running</small>';
+    // Countdown: the admin can hide it or set its own date in Admin > Shop status. No custom date = earliest product deadline.
+    const cdEl = document.getElementById('countdown');
+    const customAt = heroCfg.countdown_at ? new Date(heroCfg.countdown_at).getTime() : NaN;
+    if (heroCfg.countdown_enabled === false) cdEl.style.display = 'none';
+    else {
+      if (heroCfg.countdown_label) cdLabel = heroCfg.countdown_label;
+      const open = products.filter((p) => p.preorder_deadline && new Date(p.preorder_deadline) > new Date() && p.stock > 0)
+        .sort((a, b) => new Date(a.preorder_deadline) - new Date(b.preorder_deadline))[0];
+      if (!isNaN(customAt)) { deadline = { at: customAt, name: '' }; tick(); setInterval(tick, 1000); }
+      else if (open) { deadline = { at: new Date(open.preorder_deadline).getTime(), name: open.name }; tick(); setInterval(tick, 1000); }
+      else cdEl.innerHTML = '<small>No pre-order deadline running</small>';
+    }
   } catch (e) { fail(e); }
 })();
 </script></body></html>

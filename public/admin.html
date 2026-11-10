@@ -133,6 +133,14 @@
             <label class="form-label" for="maintMsg">Maintenance message (optional)</label>
             <textarea id="maintMsg" class="form-control mb-4" rows="2" maxlength="300" placeholder="e.g. We are updating the system. Back in 30 minutes."></textarea>
 
+            <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="cdOn"><label class="form-check-label fw-bold" for="cdOn">Show the pre-order countdown</label></div>
+            <div class="muted small mb-3">The "Next pre-order closes in" timer beside "Wear BU." on the home page. Set your own closing date and time here, or leave the date empty to follow the earliest product pre-order deadline automatically (set in Products).</div>
+            <div class="row g-2 mb-1">
+              <div class="col-12 col-md-6"><label class="form-label" for="cdAt">Closing date and time</label><input id="cdAt" type="datetime-local" class="form-control"></div>
+              <div class="col-12 col-md-6"><label class="form-label" for="cdLabel">Timer label (optional)</label><input id="cdLabel" type="text" class="form-control" maxlength="40" placeholder="Next pre-order closes in"></div>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 muted small mb-4"><span id="cdHint"></span><button type="button" class="btn btn-sm btn-outline-ms" id="cdAuto">Use automatic (from products)</button></div>
+
             <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" id="annOn"><label class="form-check-label fw-bold" for="annOn">Show an announcement popup</label></div>
             <div class="muted small mb-3">A popup students see each time they log in or open the site, for news such as a pre-order deadline or a pickup schedule. Staff and admin do not see it. Add text, a picture, or both. Leave both empty to show nothing. Students can close it for that visit.</div>
             <label class="form-label" for="annText">Announcement text</label>
@@ -731,7 +739,20 @@ function fillShopForm(s) {
   $('maintOn').checked = !!s.maintenance_mode; $('maintMsg').value = s.maintenance_message || '';
   $('annOn').checked = s.announcement_enabled !== false; $('annText').value = s.announcement_text || '';
   setAnnImage(s.announcement_image_url || ''); previewAnnouncement();
+  $('cdOn').checked = s.countdown_enabled !== false; $('cdAt').value = toLocalInput(s.countdown_at); $('cdLabel').value = s.countdown_label || ''; cdHint();
 }
+/* countdown: the date picker works in the admin's own time zone; the server stores it as an exact moment */
+function toLocalInput(iso) {
+  const d = iso ? new Date(iso) : null; if (!d || isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function cdHint() {
+  $('cdHint').textContent = $('cdAt').value ? 'Using your custom date. Students see the timer count down to it.' : 'Automatic: follows the earliest product pre-order deadline.';
+  $('cdAuto').classList.toggle('d-none', !$('cdAt').value);
+}
+$('cdAt').addEventListener('input', cdHint);
+$('cdAuto').addEventListener('click', () => { $('cdAt').value = ''; cdHint(); });
 let annImageUrl = '';
 function setAnnImage(url) {
   annImageUrl = url; $('annImage').value = '';
@@ -785,7 +806,7 @@ $('shopForm').addEventListener('submit', async (e) => {
   if ($('maintOn').checked && !confirm('Turn on maintenance mode? Students will not be able to use the site until you turn it off.')) return;
   $('shopSave').disabled = true;
   try {
-    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value, announcement_enabled: $('annOn').checked, announcement_text: $('annText').value, announcement_image_url: annImageUrl } });
+    const s = await api('/settings/shop', { method: 'PUT', body: { is_open: $('shopOpen').checked, closed_message: $('closedMsg').value, maintenance_mode: $('maintOn').checked, maintenance_message: $('maintMsg').value, announcement_enabled: $('annOn').checked, announcement_text: $('annText').value, announcement_image_url: annImageUrl, countdown_enabled: $('cdOn').checked, countdown_at: $('cdAt').value ? new Date($('cdAt').value).toISOString() : '', countdown_label: $('cdLabel').value } });
     fillShopForm(s); applyShopStatus();
     toast('Shop status saved', 'success');
   } catch (err) { fail(err); } finally { $('shopSave').disabled = false; }
