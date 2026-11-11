@@ -1,0 +1,448 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script src="/js/theme.js"></script><script src="/js/loader.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet"><title>BU Merch - Staff</title></head><body>
+<div id="nav"></div>
+<main class="container pb-5">
+  <div class="ux-crumb">Staff / <b id="crumb">Dashboard</b></div>
+  <h1 class="ux-title" id="title">Dashboard</h1>
+  <div class="ux-layout">
+    <aside><nav class="ux-side" id="tabs" aria-label="Staff">
+      <button class="ux-nav on" data-tab="dash"><i class="ico" data-i="grid"></i>Dashboard</button>
+      <button class="ux-nav" data-tab="orders"><i class="ico" data-i="bag"></i>Orders</button>
+      <button class="ux-nav" data-tab="payments"><i class="ico" data-i="wallet"></i>Payment verification</button>
+      <button class="ux-nav" data-tab="pickups"><i class="ico" data-i="cap"></i>Pickup schedule</button>
+      <a class="ux-nav out" href="/index.html"><i class="ico" data-i="home"></i>View shop</a>
+    </nav></aside>
+
+    <div class="min-w-0">
+      <!-- 10. STAFF DASHBOARD: overview of orders and sales -->
+      <section id="sec-dash">
+        <div id="lowBox"></div>
+        <div id="verifyBox"></div>
+        <div class="row g-3 mb-3" id="stats"></div>
+        <div class="row g-3">
+          <div class="col-12"><div class="ux-card mb-0"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="chart"></i></span><div><h2>Sales</h2><p>Revenue and orders in the last 30 days</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chRevenue"></canvas><div class="muted text-center pt-5 d-none" id="chRevenue-empty">No orders yet.</div></div></div></div></div>
+          <div class="col-md-6"><div class="ux-card mb-0 h-100"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="bag"></i></span><div><h2>Orders by status</h2><p>Where every order is right now</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chStatus"></canvas><div class="muted text-center pt-5 d-none" id="chStatus-empty">No orders yet.</div></div></div></div></div>
+          <div class="col-md-6"><div class="ux-card mb-0 h-100"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="lock"></i></span><div><h2>Payment methods</h2><p>How students choose to pay</p></div></div>
+            <div class="ux-body"><div class="chart-box"><canvas id="chPay"></canvas><div class="muted text-center pt-5 d-none" id="chPay-empty">No orders yet.</div></div></div></div></div>
+        </div>
+      </section>
+
+      <!-- 11. ORDER MANAGEMENT: list of customer orders -->
+      <section id="sec-orders" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="bag"></i></span><div class="grow"><h2>Orders</h2><p id="ordCount">Click an order to see its details</p></div>
+            <button class="btn btn-outline-ms btn-sm px-3 me-1" id="fExport">Export CSV</button><button class="btn btn-outline-ms btn-sm px-3" id="fRefresh">Refresh</button></div>
+          <div class="ux-body pb-3"><div class="ux-grid3">
+            <div class="ux-in"><select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="shipped">Shipped</option><option value="ready_for_pickup">Ready for pickup</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><i class="ico chev" data-i="chev"></i></div>
+            <div class="ux-in"><select id="fPay" aria-label="Filter by payment"><option value="">All payments</option><option value="unpaid">Unpaid</option><option value="pending_verification">Verifying</option><option value="paid">Paid</option><option value="failed">Failed</option></select><i class="ico chev" data-i="chev"></i></div>
+            <div class="ux-in"><i class="ico" data-i="search"></i><input id="fQ" placeholder="Search order, name or ID" aria-label="Search orders"></div>
+          </div></div>
+          <div class="ux-tablewrap"><table class="ux-table stack"><thead><tr><th>Order</th><th>Student</th><th>Pickup</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead><tbody id="orderRows"></tbody></table></div>
+          <div class="ux-foot pager" id="ordPager"></div>
+        </div>
+      </section>
+
+      <!-- 13. PAYMENT VERIFICATION: GCash receipt verification and payment confirmation -->
+      <section id="sec-payments" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="wallet"></i></span><div class="grow"><h2>Payment verification</h2><p id="payCount">Open an order to check the GCash receipt, then confirm or reject the payment</p></div>
+            <button class="btn btn-outline-ms btn-sm px-3" id="payRefresh">Refresh</button></div>
+          <div class="ux-body pb-3"><div class="ux-grid3">
+            <div class="ux-in"><select id="payFilter" aria-label="Payment filter"><option value="pending_verification">Waiting to be verified</option><option value="unpaid">Unpaid</option><option value="failed">Rejected</option><option value="paid">Paid</option></select><i class="ico chev" data-i="chev"></i></div>
+          </div></div>
+          <div class="ux-tablewrap"><table class="ux-table"><thead><tr><th>Order</th><th>Student</th><th>Method</th><th>Reference no.</th><th>Total</th><th></th></tr></thead><tbody id="payRows"></tbody></table></div>
+          <div class="ux-foot pager" id="payPager"></div>
+        </div>
+      </section>
+
+      <!-- PICKUP SCHEDULE: who is coming (staff can see it; set an order's pickup inside the order) -->
+      <section id="sec-pickups" class="d-none">
+        <div class="ux-card">
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="cap"></i></span><div class="grow"><h2>Who is coming</h2><p>The pickups scheduled for a day. To give an order its pickup date and time, open the order in the Orders tab.</p></div></div>
+          <div class="ux-body">
+            <div class="mb-3" style="max-width:220px"><label class="form-label" for="sDate">Date</label><input id="sDate" type="date" class="form-control"></div>
+            <div id="sDay"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- 12. ORDER DETAILS + 14. ORDER STATUS MANAGEMENT -->
+<div class="modal fade" id="orderModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="omTitle"></h5><button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body" id="omBody"></div>
+</div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/app.js"></script><script src="/js/select.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+renderNav('admin'); hydrateIcons();
+const STATUS_COLORS = { pending: '#f7b267', approved: '#a9cfe9', shipped: '#4a90c9', ready_for_pickup: '#2f9e75', completed: '#8fa3b3', cancelled: '#d4504b' };
+const charts = {};
+const $ = (id) => document.getElementById(id);
+
+if (requireLogin(true)) {
+  // Admins have their own page, so send them there. This page is for staff.
+  if (Auth.user().role === 'admin') location.replace('/admin.html');
+  else init();
+}
+
+function init() {
+  $('tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
+  show('dash');
+}
+
+function show(name) {
+  const TITLES = { dash: 'Dashboard', orders: 'Orders', payments: 'Payment verification', pickups: 'Pickup schedule' };
+  document.querySelectorAll('#tabs [data-tab]').forEach((b) => { b.classList.toggle('on', b.dataset.tab === name); if (b.dataset.tab === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  $('crumb').textContent = TITLES[name]; $('title').textContent = TITLES[name]; document.title = TITLES[name] + ' - Staff | BU Merch';
+  Object.keys(TITLES).forEach((s) => $('sec-' + s)?.classList.toggle('d-none', s !== name));
+  const run = ({ dash: loadDash, orders: loadOrders, payments: loadPayments, pickups: loadSchedule })[name]();
+  if (!(window.Loader && Loader.active())) Skel.wrap($('sec-' + name), run).catch(() => {}); // loading cover when switching tabs (the first load uses the page loading screen)
+}
+
+/* ---------------- Dashboard ---------------- */
+function applyChartTheme() {
+  const dark = Theme.get() === 'dark';
+  Chart.defaults.color = dark ? '#a9bccb' : '#5d7488';
+  Chart.defaults.borderColor = dark ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.10)';
+  Chart.defaults.elements.arc.borderColor = dark ? '#15222e' : '#ffffff';
+}
+applyChartTheme();
+window.addEventListener('themechange', () => {
+  applyChartTheme();
+  const sec = $('sec-dash');
+  if (sec && !sec.classList.contains('d-none')) loadDash(); // redraw charts with the new colors
+});
+
+function drawChart(id, config, hasData) {
+  charts[id]?.destroy();
+  $(id).classList.toggle('d-none', !hasData);
+  $(id + '-empty').classList.toggle('d-none', hasData);
+  if (hasData) charts[id] = new Chart($(id), config);
+}
+
+// Receipts waiting to be checked, shown at the top of the dashboard
+async function loadVerifyBox() {
+  try {
+    const v = await api('/orders?' + new URLSearchParams({ payment_status: 'pending_verification', page: 1, limit: 5 }));
+    $('verifyBox').innerHTML = v.rows.length
+      ? '<div class="ux-card"><div class="ux-head"><span class="ux-ico"><i class="ico" data-i="lock"></i></span><div class="grow"><h2>Payments to verify</h2><p>' + v.total + ' receipt' + (v.total === 1 ? '' : 's') + ' waiting to be checked</p></div>' +
+        '<button class="btn btn-outline-ms btn-sm px-3" type="button" id="verifyAll">See all</button></div>' +
+        '<div class="ux-tablewrap"><table class="ux-table"><tbody>' + v.rows.map((o) =>
+          '<tr class="clickable" data-vid="' + esc(o.id) + '"><td class="nw fw-bold">#' + o.order_no + '</td><td>' + esc(o.profiles?.full_name) + '</td><td class="nw fw-bold">' + peso(o.total) + '</td><td class="text-end"><span class="link-btn">Review</span></td></tr>').join('') +
+        '</tbody></table></div></div>'
+      : '';
+    hydrateIcons();
+  } catch { $('verifyBox').innerHTML = ''; }
+}
+$('verifyBox').addEventListener('click', (e) => {
+  if (e.target.closest('#verifyAll')) return show('payments');
+  const r = e.target.closest('[data-vid]'); if (r) openOrder(r.dataset.vid);
+});
+
+async function loadDash() {
+  try {
+    const s = await api('/analytics');
+    const t = s.totals;
+    const card = (label, val, cls = '') => '<div class="col-6 col-md-4"><div class="stat ' + cls + '"><div class="muted small">' + label + '</div><div class="display-num">' + val + '</div></div></div>';
+    $('stats').innerHTML = card('Revenue (paid)', peso(t.revenue), 'good') + card('Total orders', t.orders) +
+      card('Awaiting payment', t.pending_payments, t.pending_payments ? 'warn' : '') + card('Shipped', t.in_transit) + card('Ready for pickup', t.ready_for_pickup) +
+      card('Low stock', s.low_stock, s.low_stock ? 'warn' : '');
+
+    // Low-stock notice (information only; products are managed by the admin)
+    try {
+      const ps = await api('/products/all');
+      const low = ps.filter((p) => p.is_active && p.stock <= (p.low_stock_threshold ?? 5));
+      $('lowBox').innerHTML = low.length
+        ? '<div class="reminder small mb-3"><b>Low stock:</b> ' + low.map((p) => esc(p.name) + ' (' + (p.stock <= 0 ? 'sold out' : p.stock + ' left') + ')').join(', ') + '</div>'
+        : '';
+    } catch { $('lowBox').innerHTML = ''; }
+
+    loadVerifyBox();
+
+    const days = s.revenue_by_day;
+    drawChart('chRevenue', {
+      data: {
+        labels: days.map((d) => new Date(d.day + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })),
+        datasets: [
+          { type: 'bar', label: 'Revenue (PHP)', data: days.map((d) => Number(d.revenue)), backgroundColor: '#2b7bb9', borderRadius: 4, yAxisID: 'y' },
+          { type: 'line', label: 'Orders', data: days.map((d) => d.orders), borderColor: '#f28c28', backgroundColor: '#f28c28', tension: .3, yAxisID: 'y1' },
+        ],
+      },
+      options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true }, y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { precision: 0 } } } },
+    }, days.length > 0);
+
+    drawChart('chStatus', {
+      type: 'doughnut',
+      data: { labels: s.orders_by_status.map((x) => (STATUS[x.status] || [x.status])[0]), datasets: [{ data: s.orders_by_status.map((x) => x.count), backgroundColor: s.orders_by_status.map((x) => STATUS_COLORS[x.status] || '#999') }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+    }, s.orders_by_status.length > 0);
+
+    drawChart('chPay', {
+      type: 'doughnut',
+      data: { labels: s.payment_split.map((x) => PAY_METHOD[x.method] || x.method), datasets: [{ data: s.payment_split.map((x) => x.count), backgroundColor: ['#2b7bb9', '#f28c28', '#a9cfe9'] }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+    }, s.payment_split.length > 0);
+  } catch (e) { fail(e); }
+}
+
+/* ---------------- Pager ---------------- */
+const PAGE_SIZE = 10;
+function renderPager(el, d, go) {
+  if (!d || d.total <= d.limit) { el.innerHTML = d && d.total ? '<span class="muted small me-auto">' + d.total + ' in total</span>' : ''; return; }
+  const from = (d.page - 1) * d.limit + 1, to = Math.min(d.page * d.limit, d.total);
+  el.innerHTML = '<span class="muted small me-auto">Showing ' + from + '-' + to + ' of ' + d.total + '</span>' +
+    '<button class="btn btn-outline-ms btn-sm px-3" data-go="' + (d.page - 1) + '"' + (d.page <= 1 ? ' disabled' : '') + '>Previous</button>' +
+    '<span class="small nw">Page ' + d.page + ' of ' + d.pages + '</span>' +
+    '<button class="btn btn-outline-ms btn-sm px-3" data-go="' + (d.page + 1) + '"' + (d.page >= d.pages ? ' disabled' : '') + '>Next</button>';
+  el.onclick = (e) => { const b = e.target.closest('button[data-go]'); if (b && !b.disabled) go(parseInt(b.dataset.go, 10)); };
+}
+
+/* ---------------- Orders (11. Order Management) ---------------- */
+let ordersCache = [], campusList = [], ordPage = 1;
+async function loadOrders(page) {
+  if (typeof page === 'number') ordPage = page;
+  try {
+    const q = new URLSearchParams({ page: ordPage, limit: PAGE_SIZE });
+    if ($('fStatus').value) q.set('status', $('fStatus').value);
+    if ($('fPay').value) q.set('payment_status', $('fPay').value);
+    if ($('fQ').value.trim()) q.set('q', $('fQ').value.trim());
+    const d = await api('/orders?' + q.toString());
+    if (!d.rows.length && d.page > 1) return loadOrders(d.pages);
+    ordersCache = d.rows;
+    $('ordCount').textContent = d.total + ' order' + (d.total === 1 ? '' : 's') + ' · click one to see its details';
+    renderPager($('ordPager'), d, loadOrders);
+    $('orderRows').innerHTML = ordersCache.length ? ordersCache.map((o) =>
+      '<tr class="clickable" data-id="' + o.id + '"><td class="nw"><div class="fw-bold">#' + o.order_no + '</div><div class="muted small">' + fmtDate(o.created_at) + '</div></td>' +
+      '<td><div class="fw-medium">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.student_id || o.profiles?.university_email || '') + '</div></td>' +
+      '<td>' + esc(o.campus?.name || '-') + '</td><td class="nw fw-bold">' + peso(o.total) + '</td>' +
+      '<td class="nw">' + badge(STATUS, o.status) + '</td>' +
+      '<td class="nw">' + badge(PAY_STATUS, o.payment_status) + '<div class="muted small mt-1">' + esc(PAY_METHOD[o.payment_method]) + '</div></td></tr>').join('')
+      : '<tr><td colspan="6" class="text-center muted py-4">No orders match these filters.</td></tr>';
+  } catch (e) { fail(e); }
+}
+const csvCell = (v) => {
+  let t = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // stop Excel from running text as a formula
+  return '"' + t.replace(/"/g, '""') + '"';
+};
+async function exportOrdersCsv() {
+  const btn = $('fExport'); btn.disabled = true;
+  let rows = [];
+  try {
+    for (let page = 1; page <= 100; page++) {
+      const q = new URLSearchParams({ page, limit: 100 });
+      if ($('fStatus').value) q.set('status', $('fStatus').value);
+      if ($('fPay').value) q.set('payment_status', $('fPay').value);
+      if ($('fQ').value.trim()) q.set('q', $('fQ').value.trim());
+      const d = await api('/orders?' + q.toString());
+      rows = rows.concat(d.rows);
+      if (page >= d.pages) break;
+    }
+  } catch (e) { btn.disabled = false; return fail(e); }
+  btn.disabled = false;
+  if (!rows.length) return toast('No orders to export', 'warning');
+  const head = ['Order no', 'Date placed', 'Student', 'Student ID', 'Email', 'Course', 'Pickup campus', 'Items', 'Total (PHP)', 'Order status', 'Payment method', 'Payment status', 'Reference number', 'Pickup date'];
+  const data = rows.map((o) => [
+    o.order_no, fmtDateTime(o.created_at), o.profiles?.full_name, o.profiles?.student_id, o.profiles?.university_email, o.profiles?.course,
+    o.campus?.name, (o.order_items || []).map((i) => i.product_name + ' x' + i.quantity).join('; '), Number(o.total || 0).toFixed(2),
+    (STATUS[o.status] || [o.status])[0], PAY_METHOD[o.payment_method] || o.payment_method, (PAY_STATUS[o.payment_status] || [o.payment_status])[0],
+    o.reference_number, o.pickup_date,
+  ]);
+  const csv = '\ufeff' + [head, ...data].map((r) => r.map(csvCell).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'bu-merch-orders-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Exported ' + rows.length + ' orders', 'success');
+}
+$('fExport').addEventListener('click', exportOrdersCsv);
+$('fRefresh').addEventListener('click', () => loadOrders());
+$('fStatus').addEventListener('change', () => loadOrders(1));
+$('fPay').addEventListener('change', () => loadOrders(1));
+let qTimer; $('fQ').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(() => loadOrders(1), 350); });
+$('orderRows').addEventListener('click', (e) => { const r = e.target.closest('tr[data-id]'); if (r) openOrder(r.dataset.id); });
+
+/* ---------------- Payment verification (13) ---------------- */
+let payPage = 1;
+async function loadPayments(page) {
+  if (typeof page === 'number') payPage = page;
+  try {
+    const q = new URLSearchParams({ page: payPage, limit: PAGE_SIZE, payment_status: $('payFilter').value });
+    const d = await api('/orders?' + q.toString());
+    if (!d.rows.length && d.page > 1) return loadPayments(d.pages);
+    renderPager($('payPager'), d, loadPayments);
+    $('payCount').textContent = d.total + ' order' + (d.total === 1 ? '' : 's') + ' · open one to check the receipt and confirm or reject the payment';
+    $('payRows').innerHTML = d.rows.length ? d.rows.map((o) =>
+      '<tr class="clickable" data-id="' + o.id + '"><td class="nw"><div class="fw-bold">#' + o.order_no + '</div><div class="muted small">' + fmtDate(o.created_at) + '</div></td>' +
+      '<td><div class="fw-medium">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.student_id || '') + '</div></td>' +
+      '<td class="nw">' + esc(PAY_METHOD[o.payment_method] || o.payment_method) + '</td>' +
+      '<td class="nw">' + esc(o.reference_number || '-') + '</td>' +
+      '<td class="nw fw-bold">' + peso(o.total) + '</td>' +
+      '<td class="text-end nw"><button class="btn btn-sm btn-ms" type="button">Review</button></td></tr>').join('')
+      : '<tr><td colspan="6" class="text-center muted py-4">Nothing here. No orders match this filter.</td></tr>';
+  } catch (e) { fail(e); }
+}
+$('payFilter').addEventListener('change', () => loadPayments(1));
+$('payRefresh').addEventListener('click', () => loadPayments());
+$('payRows').addEventListener('click', (e) => { const r = e.target.closest('tr[data-id]'); if (r) openOrder(r.dataset.id); });
+
+// After any change inside the order popup, refresh whatever lists are on screen
+function refreshLists() { loadOrders(); loadPayments(); loadVerifyBox(); }
+
+/* ---------------- Order details and status (12 + 14) ---------------- */
+// Same flow rules as the server (routes/orders.js): move forward or cancel; completed and cancelled are final
+const FLOW = ['pending', 'approved', 'shipped', 'ready_for_pickup', 'completed'];
+const canMove = (from, to) => from === to || (to === 'cancelled' && from !== 'completed' && from !== 'cancelled') ||
+  (FLOW.includes(from) && FLOW.includes(to) && FLOW.indexOf(to) > FLOW.indexOf(from));
+const SCHEDULABLE = ['pending', 'approved', 'shipped', 'ready_for_pickup'];
+const slotDateLabel = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+const orderModal = new bootstrap.Modal($('orderModal'));
+async function openOrder(id) {
+  try {
+    $('omTitle').textContent = 'Order'; $('omBody').innerHTML = Skel.modal(); orderModal.show();
+    if (!campusList.length) campusList = await api('/campuses/all');
+    const o = await api('/orders/' + id);
+    $('omTitle').textContent = 'Order #' + o.order_no;
+    const canAssign = SCHEDULABLE.includes(o.status);
+    let bk = null; try { bk = await api('/pickup/order/' + id); } catch {}
+    let avail = [];
+    if (canAssign) { try { avail = (await api('/pickup/availability')).filter((d) => d.slots.length); } catch {} }
+    const canMarkPaid = o.payment_status !== 'paid' && o.status !== 'cancelled';
+
+    const releasedInfo = o.released_at ? '<div class="alert alert-success py-2 small mb-3">Released to <b>' + esc(o.released_to || 'the student') + '</b> on ' + fmtDateTime(o.released_at) + '. Student ID was checked.</div>' : '';
+    const releasePanel = o.status === 'ready_for_pickup' ?
+      '<div class="panel mb-3"><div class="fw-bold mb-1">Release order</div>' +
+      '<div class="muted small mb-2">Ask for the student\'s school ID, check the photo and name, then type the ID number below. The order is only released if it matches.</div>' +
+      '<div class="row g-2"><div class="col-md-6"><label class="form-label small" for="omRelId">ID number on the school ID</label><input id="omRelId" class="form-control" autocomplete="off" maxlength="30" placeholder="e.g. 2042-0-1293"></div>' +
+      '<div class="col-md-6"><label class="form-label small" for="omRelBy">Collected by</label><select id="omRelBy" class="form-select"><option value="student">The student</option><option value="representative">A representative</option></select></div>' +
+      '<div class="col-12 d-none" id="omRelNameRow"><label class="form-label small" for="omRelName">Full name of the person collecting</label><input id="omRelName" class="form-control" autocomplete="off" maxlength="80"></div></div>' +
+      (o.payment_status !== 'paid' && o.payment_method === 'onsite' ? '<div class="form-check mt-2"><input type="checkbox" class="form-check-input" id="omRelCash"><label class="form-check-label" for="omRelCash">Cash received: ' + peso(o.total) + '</label></div>' : '') +
+      (o.payment_status !== 'paid' && o.payment_method !== 'onsite' ? '<div class="alert alert-warning py-2 small mt-2 mb-0">This order is not paid yet. Confirm the payment first.</div>' : '') +
+      '<button class="btn btn-gold mt-3" id="omRelease">Release order</button></div>' : '';
+    const pickupPanel = '<div class="panel mb-3"><div class="fw-bold mb-2">Pickup schedule</div>' +
+      (bk ? '<div class="alert alert-info py-2 small mb-2">Pickup: <b>' + slotDateLabel(bk.date) + ' &middot; ' + esc(bk.label) + '</b></div>'
+          : '<div class="muted small mb-2">No pickup schedule set yet. The student will see it on their order page once you set it.</div>') +
+      (canAssign
+        ? (avail.length
+            ? '<label class="form-label small" for="omADate">Pickup date</label><select id="omADate" class="form-select mb-2">' +
+              avail.map((d) => '<option value="' + d.date + '"' + (bk && bk.date === d.date ? ' selected' : '') + '>' + slotDateLabel(d.date) + '</option>').join('') + '</select>' +
+              '<div class="row g-2" id="omASlots"></div>' +
+              '<button type="button" class="btn btn-sm btn-ms mt-2" id="omASave" disabled>Save pickup schedule</button>'
+            : '<div class="muted small">No open pickup days. Ask an admin to open pickup days.</div>')
+        : '') +
+      '</div>';
+
+    $('omBody').innerHTML =
+      '<div class="row g-3"><div class="col-md-6"><div class="muted small">Student</div><div class="fw-bold">' + esc(o.profiles?.full_name) + '</div><div class="muted small">' + esc(o.profiles?.university_email) + '</div><div class="muted small">' + esc([o.profiles?.student_id && 'ID ' + o.profiles.student_id, o.profiles?.course, o.profiles?.year_level, o.profiles?.block && 'Block ' + o.profiles.block, o.profiles?.phone].filter(Boolean).join(' | ')) + '</div></div>' +
+      '<div class="col-md-6"><div class="muted small">Placed</div><div>' + fmtDateTime(o.created_at) + '</div></div></div><hr>' +
+      '<table class="table table-sm"><tbody>' + o.order_items.map((i) => '<tr><td>' + esc(i.product_name) + '</td><td class="text-end">x' + i.quantity + '</td><td class="text-end">' + peso(i.unit_price * i.quantity) + '</td></tr>').join('') +
+      '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + peso(o.total) + '</th></tr></tfoot></table>' +
+      // Payment verification comes first so it is the first thing staff see
+      '<div class="panel mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><div><div class="muted small">Payment</div><div class="fw-bold">' + esc(PAY_METHOD[o.payment_method]) + '</div></div><div>' + badge(PAY_STATUS, o.payment_status) + '</div></div>' +
+      (o.reference_number ? '<div class="mt-2 small">Reference number: <b>' + esc(o.reference_number) + '</b></div>' : '') +
+      (o.receipt_url ? '<div class="mt-2"><a href="' + esc(o.receipt_url) + '" target="_blank" rel="noopener"><img src="' + esc(o.receipt_url) + '" alt="GCash receipt" style="max-height:220px;border-radius:8px;border:1px solid var(--line)"></a><div class="muted small mt-1">Tap the receipt to open it full size. Check the amount, the reference number and the GCash name.</div></div>' : '') +
+      (canMarkPaid ? '<div class="mt-3 d-flex gap-2"><button class="btn btn-sm btn-ms" id="omPaid">' + (o.payment_method === 'onsite' ? 'Confirm cash received' : 'Mark as paid') + '</button>' +
+        (o.payment_status === 'pending_verification' ? '<button class="btn btn-sm btn-outline-danger" id="omFail">Reject receipt</button>' : '') + '</div>' : '') + '</div>' +
+      releasedInfo + releasePanel + pickupPanel +
+      '<div class="row g-2 mb-2"><div class="col-md-6"><label class="form-label" for="omCampus">Pickup location</label><select id="omCampus" class="form-select">' +
+      campusList.map((c) => '<option value="' + c.id + '"' + (c.id === o.pickup_campus_id ? ' selected' : '') + '>' + esc(c.name) + (c.is_main ? ' (Main)' : '') + '</option>').join('') + '</select><div class="form-text">Change to the Main Campus if the student must pick up there.</div></div>' +
+      '<div class="col-md-6"><label class="form-label" for="omNote">Pickup note for this order (optional)</label><textarea id="omNote" class="form-control" rows="2" placeholder="Overrides the campus note in the email">' + esc(o.pickup_note || '') + '</textarea></div></div>' +
+      '<div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="omStatus">Order status</label><select id="omStatus" class="form-select">' +
+      Object.entries(STATUS).filter(([k]) => canMove(o.status, k) && k !== 'completed').map(([k, v]) => '<option value="' + k + '"' + (k === o.status ? ' selected' : '') + '>' + v[0] + '</option>').join('') + '</select><div class="form-text">To complete an order, use Release order once it is ready for pickup.</div></div>' +
+      '<div class="col-md-4"><label class="form-label" for="omPickup">Pickup date</label><input id="omPickup" type="date" class="form-control" value="' + (o.pickup_date || '') + '"' + (bk ? ' readonly title="Set from the pickup schedule above"' : '') + '></div>' +
+      '<div class="col-md-3"><button class="btn btn-gold w-100" id="omSave">Save status</button></div></div>';
+
+    // Pickup schedule picker: date, then a time slot with places left
+    if ($('omADate')) {
+      const drawA = () => {
+        const day = avail.find((d) => d.date === $('omADate').value);
+        $('omASlots').innerHTML = (day ? day.slots : []).map((s) => {
+          const off = s.status !== 'available';
+          const tag = s.status === 'available' ? '<span class="badge bg-success">' + s.left + ' left</span>'
+            : s.status === 'full' ? '<span class="badge bg-danger">Fully booked</span>' : '<span class="badge bg-secondary">Time passed</span>';
+          const mine = bk && day && bk.date === day.date && bk.slot_id === s.id;
+          return '<div class="col-6"><label class="pay-opt h-100"' + (off ? ' style="opacity:.6;cursor:not-allowed"' : '') + '><input type="radio" name="omASlot" value="' + s.id + '" class="form-check-input me-2"' + (off ? ' disabled' : '') + (mine ? ' checked' : '') + '><b>' + esc(s.label) + '</b><div class="ms-4 mt-1">' + tag + '</div></label></div>';
+        }).join('') || '<div class="col-12 muted small">No time slots on this date.</div>';
+        const picked = document.querySelector('input[name=omASlot]:checked');
+        $('omASave').disabled = !picked || !!(bk && day && bk.date === day.date && picked.value === bk.slot_id);
+      };
+      $('omADate').addEventListener('change', drawA);
+      $('omASlots').addEventListener('change', () => { $('omASave').disabled = !document.querySelector('input[name=omASlot]:checked'); });
+      $('omASave').addEventListener('click', async (e) => {
+        const picked = document.querySelector('input[name=omASlot]:checked'); if (!picked) return;
+        e.target.disabled = true;
+        try {
+          await api('/pickup/assign', { method: 'POST', body: { order_id: id, date: $('omADate').value, slot_id: picked.value } });
+          toast('Pickup schedule set', 'success');
+          await openOrder(id); refreshLists();
+        } catch (err) { fail(err); e.target.disabled = false; }
+      });
+      drawA();
+    }
+
+    $('omRelBy')?.addEventListener('change', (e) => $('omRelNameRow').classList.toggle('d-none', e.target.value !== 'representative'));
+    $('omRelease')?.addEventListener('click', async (e) => {
+      const idNo = $('omRelId').value.trim();
+      if (!idNo) return toast('Type the ID number shown on the student\'s school ID', 'warning');
+      if ($('omRelBy').value === 'representative' && !$('omRelName').value.trim()) return toast('Enter the name of the person collecting', 'warning');
+      e.target.disabled = true;
+      try {
+        await api('/orders/' + id + '/release', { method: 'POST', body: { id_number: idNo, received_by: $('omRelBy').value, receiver_name: $('omRelName').value, cash_received: !!$('omRelCash')?.checked } });
+        toast('Order released and student notified', 'success'); orderModal.hide(); refreshLists();
+      } catch (err) { fail(err); e.target.disabled = false; }
+    });
+    $('omPaid')?.addEventListener('click', () => payAction(id, 'paid'));
+    $('omFail')?.addEventListener('click', () => payAction(id, 'failed'));
+    $('omSave').addEventListener('click', async () => {
+      const status = $('omStatus').value;
+      if (status === 'cancelled' && !confirm('Cancel this order? Stock will be returned.')) return;
+      try {
+        await api('/orders/' + id + '/status', { method: 'PATCH', body: { status, pickup_date: $('omPickup').value || undefined, pickup_campus_id: $('omCampus').value || undefined, pickup_note: $('omNote').value } });
+        toast('Status updated and student notified', 'success'); orderModal.hide(); refreshLists();
+      } catch (err) { fail(err); }
+    });
+    orderModal.show();
+  } catch (e) { orderModal.hide(); fail(e); }
+}
+async function payAction(id, payment_status) {
+  if (payment_status === 'failed' && !confirm('Reject this receipt? The student will need to send a new one.')) return;
+  // keep the order popup open after a payment change so staff can set the status right away
+  const keep = { st: $('omStatus')?.value, pd: $('omPickup')?.value, nt: $('omNote')?.value, cp: $('omCampus')?.value, top: $('omBody').scrollTop };
+  try {
+    await api('/orders/' + id + '/payment', { method: 'PATCH', body: { payment_status } });
+    toast(payment_status === 'paid' ? 'Payment confirmed' : 'Receipt rejected', 'success'); refreshLists();
+    await openOrder(id);
+    const setIf = (el, v) => { if (el && v !== undefined && v !== null && (el.tagName !== 'SELECT' || [...el.options].some((o) => o.value === v))) el.value = v; };
+    setIf($('omStatus'), keep.st); setIf($('omCampus'), keep.cp); setIf($('omNote'), keep.nt);
+    if ($('omPickup') && !$('omPickup').readOnly) setIf($('omPickup'), keep.pd);
+    $('omBody').scrollTop = keep.top;
+  } catch (e) { fail(e); }
+}
+
+/* ---------------- Pickup schedule: who is coming ---------------- */
+const todayPH = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+async function loadSchedule() {
+  if (!$('sDate').value) $('sDate').value = todayPH();
+  return loadDay();
+}
+async function loadDay() {
+  try {
+    const d = await api('/pickup/day/' + ($('sDate').value || todayPH()));
+    $('sDay').innerHTML = (d.open ? '' : '<div class="muted small mb-2">Pickup is closed on this date.</div>') + d.slots.map((s) =>
+      '<div class="panel mb-2 py-2"><div class="d-flex justify-content-between"><b>' + esc(s.label) + '</b><span class="muted small">' + s.orders.length + ' / ' + s.capacity + ' booked</span></div>' +
+      (s.orders.length ? s.orders.map((o) => '<div class="small mt-1">#' + o.order_no + ' &middot; ' + esc(o.name) + (o.student_id ? ' <span class="muted">(' + esc(o.student_id) + ')</span>' : '') + ' ' + badge(STATUS, o.status) + '</div>').join('') : '<div class="muted small mt-1">No bookings</div>') + '</div>').join('');
+  } catch (e) { fail(e); }
+}
+$('sDate').addEventListener('change', loadDay);
+</script></body></html>

@@ -281,7 +281,7 @@ const $ = (id) => document.getElementById(id);
 if (requireLogin(true)) init();
 
 function init() {
-  if (Auth.user().role !== 'admin') { $('tabUsers').remove(); $('tabPayment').remove(); $('tabShop').remove(); $('tabAudit').remove(); }
+  if (Auth.user().role !== 'admin') return location.replace('/staff.html');
   $('tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); });
   show('dash');
 }

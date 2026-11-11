@@ -371,7 +371,7 @@ function renderNav(active) {
     </div>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
-        ${u && Auth.isStaff() ? `<li class="nav-item"><a class="nav-link ${active === 'admin' ? 'active' : ''}" href="/admin.html">Admin</a></li>` : ''}
+        ${u && Auth.isStaff() ? `<li class="nav-item"><a class="nav-link ${active === 'admin' ? 'active' : ''}" href="${u.role === 'admin' ? '/admin.html' : '/staff.html'}">${u.role === 'admin' ? 'Admin' : 'Staff'}</a></li>` : ''}
       </ul>
       <ul class="navbar-nav align-items-md-center me-md-3">${account}</ul>
     </div></div></nav>`;
