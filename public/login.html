@@ -127,7 +127,7 @@ document.querySelectorAll('[data-eye]').forEach((b) => b.addEventListener('click
 async function doLogin(email, password) {
   const data = await api('/auth/login', { method: 'POST', body: { email, password }, auth: false });
   Auth.save(data);
-  location.href = data.user.role !== 'student' ? '/admin.html' : (next && next.startsWith('/') ? next : '/index.html');
+  location.href = data.user.role === 'admin' ? '/admin.html' : data.user.role === 'staff' ? '/staff.html' : (next && next.startsWith('/') ? next : '/index.html');
 }
 $('viewLogin').addEventListener('submit', async (e) => {
   e.preventDefault(); const b = $('lBtn'); b.disabled = true;

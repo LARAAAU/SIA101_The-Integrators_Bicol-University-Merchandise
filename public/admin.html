@@ -213,7 +213,7 @@
       <!-- USERS -->
       <section id="sec-users" class="d-none">
         <div class="ux-card">
-          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="users"></i></span><div class="grow"><h2>Users</h2><p>Make someone staff or admin. Staff can manage orders and products.</p></div></div>
+          <div class="ux-head"><span class="ux-ico"><i class="ico" data-i="users"></i></span><div class="grow"><h2>Users</h2><p>Make someone staff or admin, and rename staff accounts (for example "Polangui Campus Staff").</p></div></div>
           <div class="ux-body pb-0"><div class="ux-grid3"><div class="ux-in"><i class="ico" data-i="search"></i><input id="uQ" placeholder="Search name, email or student ID" aria-label="Search users"></div>
             <div class="ux-in"><select id="uRole" aria-label="Filter by role"><option value="">All roles</option><option value="student">Students</option><option value="staff">Staff</option><option value="admin">Admins</option></select><i class="ico chev" data-i="chev"></i></div></div></div>
           <div class="ux-tablewrap mt-3"><table class="ux-table"><thead><tr><th>Name</th><th>Student ID</th><th>Course, year and block</th><th>Campus</th><th>Mobile</th><th>Role</th></tr></thead><tbody id="userRows"></tbody></table></div>
@@ -223,6 +223,14 @@
     </div>
   </div>
 </main>
+
+<!-- EDIT STAFF NAME MODAL -->
+<div class="modal fade" id="nameModal" tabindex="-1" aria-labelledby="nmTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="nmTitle">Edit staff name</h5><button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body"><label class="form-label" for="nmInput">Name shown for this staff account</label><input id="nmInput" class="form-control" maxlength="60" placeholder="e.g. Polangui Campus Staff" autocomplete="off">
+    <div class="muted small mt-2">Only staff accounts can be renamed here. The name is shown in the navbar and on order records. The staff may need to log in again to see it.</div></div>
+  <div class="modal-footer"><button type="button" class="btn btn-outline-ms" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-ms" id="nmSave">Save name</button></div>
+</div></div></div>
 
 <!-- ORDER MODAL -->
 <div class="modal fade" id="orderModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
@@ -944,13 +952,25 @@ async function loadUsers(page) {
     const users = d.rows; renderPager($('userPager'), d, loadUsers);
     const me = Auth.user().id;
     $('userRows').innerHTML = users.map((u) =>
-      '<tr><td class="fw-bold">' + esc(u.full_name) + '<div class="muted small fw-normal">' + esc(u.university_email) + '</div></td><td>' + esc(u.student_id || '-') + '</td><td>' + esc([u.course, u.year_level, u.block && 'Block ' + u.block].filter(Boolean).join(' / ') || '-') + '</td><td>' + esc(u.campus?.name || '-') + '</td><td>' + esc(u.phone || '-') + '</td>' +
+      '<tr><td class="fw-bold">' + esc(u.full_name) + (u.role === 'staff' ? ' <button type="button" class="link-btn small ms-1" data-edit-name="' + u.id + '" data-name="' + esc(u.full_name) + '">Edit name</button>' : '') + '<div class="muted small fw-normal">' + esc(u.university_email) + '</div></td><td>' + esc(u.student_id || '-') + '</td><td>' + esc([u.course, u.year_level, u.block && 'Block ' + u.block].filter(Boolean).join(' / ') || '-') + '</td><td>' + esc(u.campus?.name || '-') + '</td><td>' + esc(u.phone || '-') + '</td>' +
       '<td><select class="form-select form-select-sm" style="width:130px" aria-label="Role of ' + esc(u.full_name) + '" data-id="' + u.id + '"' + (u.id === me ? ' disabled' : '') + '>' +
       ['student', 'staff', 'admin'].map((r) => '<option' + (r === u.role ? ' selected' : '') + '>' + r + '</option>').join('') + '</select></td></tr>').join('');
   } catch (e) { fail(e); }
 }
 let uqTimer; $('uQ').addEventListener('input', () => { clearTimeout(uqTimer); uqTimer = setTimeout(() => loadUsers(1), 350); });
 $('uRole').addEventListener('change', () => loadUsers(1));
+const nameModal = new bootstrap.Modal($('nameModal')); let nameId = '';
+$('userRows').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-edit-name]'); if (!b) return;
+  nameId = b.dataset.editName; $('nmInput').value = b.dataset.name; nameModal.show();
+  setTimeout(() => { $('nmInput').focus(); $('nmInput').select(); }, 300);
+});
+$('nmSave').addEventListener('click', async () => {
+  const btn = $('nmSave'); btn.disabled = true;
+  try { await api('/users/' + nameId + '/name', { method: 'PATCH', body: { name: $('nmInput').value } }); nameModal.hide(); toast('Name updated', 'success'); loadUsers(); }
+  catch (err) { fail(err); } finally { btn.disabled = false; }
+});
+$('nmInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('nmSave').click(); } });
 $('userRows').addEventListener('change', async (e) => {
   const sel = e.target.closest('select[data-id]'); if (!sel) return;
   try { await api('/users/' + sel.dataset.id + '/role', { method: 'PATCH', body: { role: sel.value } }); toast('Role updated', 'success'); } catch (err) { fail(err); loadUsers(); }

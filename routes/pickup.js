@@ -41,9 +41,9 @@ async function schedule(req, res, order, allowed) {
   res.json(result);
 }
 
-// POST /api/pickup/assign  { order_id, date, slot_id }   (admin only, any order that is not cancelled or completed)
+// POST /api/pickup/assign  { order_id, date, slot_id }   (staff or admin, any order that is not cancelled or completed)
 router.post('/assign', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Only admins can set the pickup schedule for a student' });
+  if (!isStaff(req.user)) return res.status(403).json({ message: 'Only staff can set the pickup schedule for a student' });
   const order = await getOrder(req.body?.order_id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
   await schedule(req, res, order, SCHEDULABLE);

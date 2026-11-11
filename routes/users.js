@@ -26,4 +26,26 @@ router.patch('/:id/role', adminOnly, async (req, res) => {
   res.json(data);
 });
 
+// PATCH /api/users/:id/name  { name }   admin only, STAFF accounts only (e.g. "Polangui Campus Staff")
+// Keeps full_name, first_name and last_name in step, because the navbar and emails read them.
+router.patch('/:id/name', adminOnly, async (req, res) => {
+  const name = String(req.body.name ?? '').replace(/\s+/g, ' ').trim();
+  if (name.length < 2 || name.length > 60) return res.status(400).json({ message: 'The name must be 2 to 60 characters' });
+  if (!/^[\p{L}\p{N} .'\-]+$/u.test(name)) return res.status(400).json({ message: 'Use letters, numbers, spaces, . \' and - only' });
+
+  const { data: target, error: tErr } = await admin.from('profiles').select('id, role').eq('id', req.params.id).maybeSingle();
+  if (tErr) return res.status(400).json({ message: tErr.message });
+  if (!target) return res.status(404).json({ message: 'User not found' });
+  if (target.role !== 'staff') return res.status(400).json({ message: 'Only staff names can be edited here' });
+
+  const parts = name.split(' ');
+  const last = parts.length > 1 ? parts.pop() : null;
+  const first = parts.join(' ');
+  const { data, error } = await admin.from('profiles')
+    .update({ full_name: name, first_name: first, middle_name: null, last_name: last })
+    .eq('id', req.params.id).select().single();
+  if (error) return res.status(400).json({ message: error.message });
+  res.json(data);
+});
+
 module.exports = router;
